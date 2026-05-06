@@ -25,11 +25,13 @@ Use this stack unless implementation discovers a strong reason to change:
 
 ## Current Status
 
-Status: F2 API contracts and client utilities exist.
+Status: F3/F4 app shell and create-job flow exist.
 
 The React + Vite + TypeScript app shell, routing, Tailwind setup, TanStack Query provider, and basic tests are in place. Typed `/slideshow-video-jobs` API contracts, artifact URL helpers, an API client wrapper, and mocked unit tests also exist.
 
-The UI pages are still placeholders. They are not wired to live backend calls yet. The create-job form, polling UI, artifact viewers, and final video preview are still deferred.
+The create page now includes a structured slideshow job form. When the backend API is running, a valid submit calls `POST /slideshow-video-jobs` and navigates to `/slideshow-jobs/:jobId` after creation.
+
+The recent jobs page and job detail page are still placeholder-level. Job detail polling, artifact viewers, and final video preview are still deferred.
 
 ## Local Development
 
@@ -65,7 +67,7 @@ npm run test:run
 npm run build
 ```
 
-The placeholder UI does not call the backend yet. API utilities use this environment variable when later phases wire the UI to `/slideshow-video-jobs`.
+The create form uses this environment variable when submitting to `/slideshow-video-jobs`. Tests mock the API and do not require a running backend.
 
 ## V1 Goal
 

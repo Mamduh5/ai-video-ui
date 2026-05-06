@@ -12,7 +12,8 @@ describe("App", () => {
     expect(
       screen.getByRole("link", { name: /recent jobs/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /create/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /create video/i }),
+    ).toBeInTheDocument();
   });
 });
-

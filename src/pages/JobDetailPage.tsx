@@ -12,7 +12,8 @@ export function JobDetailPage() {
         <div>
           <h2 className="text-2xl font-semibold">Job Detail</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Status, artifacts, and final video preview will appear here later.
+            This route is ready for created jobs. Polling, status, artifacts,
+            and final video preview are planned for F5/F6/F7.
           </p>
         </div>
 
@@ -28,8 +29,8 @@ export function JobDetailPage() {
               </code>
             </p>
             <p className="max-w-2xl text-sm text-slate-600">
-              Polling, artifact loading, failure details, and MP4 preview are
-              intentionally deferred to later implementation phases.
+              This page does not fetch job detail yet. It only confirms the
+              route target after create-job submission.
             </p>
           </div>
         </Card>
@@ -40,11 +41,11 @@ export function JobDetailPage() {
           <h3 className="text-base font-semibold">Planned detail panel</h3>
           <p className="text-sm text-slate-600">
             This side panel will eventually show current step, artifact
-            readiness, manual refresh, and friendly error details.
+            readiness, manual refresh, and friendly error details. No polling is
+            implemented in this slice.
           </p>
         </div>
       </Card>
     </div>
   );
 }
-

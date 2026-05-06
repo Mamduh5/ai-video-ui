@@ -10,7 +10,7 @@ export function RecentJobsPage() {
         <div>
           <h2 className="text-2xl font-semibold">Recent Jobs</h2>
           <p className="mt-1 text-sm text-slate-600">
-            This placeholder will show recently created slideshow video jobs.
+            Job history will be added when the backend exposes a list endpoint.
           </p>
         </div>
         <Link
@@ -26,9 +26,10 @@ export function RecentJobsPage() {
           <StatusBadge label="Placeholder" />
           <h3 className="text-base font-semibold">No slideshow jobs yet</h3>
           <p className="max-w-2xl text-sm text-slate-600">
-            F1 only establishes routing, providers, layout, styling, and test
-            tooling. Local recent-job storage and backend status loading are
-            intentionally deferred.
+            This page stays local and placeholder-level for now because the
+            backend does not expose a recent slideshow jobs list endpoint yet.
+            Create a video, then the app will navigate directly to its detail
+            route.
           </p>
         </div>
       </Card>
