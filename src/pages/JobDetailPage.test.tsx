@@ -18,6 +18,26 @@ vi.mock("../features/slideshowJobs/hooks", async (importOriginal) => {
   };
 });
 
+vi.mock("../features/slideshowJobs/components/FinalVideoPanel", () => ({
+  FinalVideoPanel: () => <div>Final video panel</div>,
+}));
+
+vi.mock("../features/slideshowJobs/components/SlideArtifactGrid", () => ({
+  SlideArtifactGrid: () => <div>Slide artifact grid</div>,
+}));
+
+vi.mock("../features/slideshowJobs/components/TextArtifactViewer", () => ({
+  TextArtifactViewer: ({ title }: { title: string }) => <div>{title} viewer</div>,
+}));
+
+vi.mock("../features/slideshowJobs/components/JsonArtifactViewer", () => ({
+  JsonArtifactViewer: ({ title }: { title: string }) => <div>{title} viewer</div>,
+}));
+
+vi.mock("../features/slideshowJobs/components/AudioArtifactViewer", () => ({
+  AudioArtifactViewer: () => <div>Voice viewer</div>,
+}));
+
 describe("JobDetailPage", () => {
   beforeEach(() => {
     vi.mocked(useSlideshowJob).mockReset();
@@ -73,7 +93,7 @@ describe("JobDetailPage", () => {
     expect(screen.getAllByText("How photosynthesis works").length).toBeGreaterThan(
       0,
     );
-    expect(screen.getByText("Slide 1: What plants need")).toBeInTheDocument();
+    expect(screen.getByText("Slide artifact grid")).toBeInTheDocument();
     expect(screen.getByText("Brief")).toBeInTheDocument();
     expect(screen.getByText("Video")).toBeInTheDocument();
     expect(screen.getByText(/Artifact body fetching is deferred/i)).toBeInTheDocument();
@@ -93,8 +113,7 @@ describe("JobDetailPage", () => {
 
     renderPage();
 
-    expect(screen.getAllByText(/Video ready/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/preview and MP4 download are intentionally deferred/i)).toBeInTheDocument();
+    expect(screen.getByText("Final video panel")).toBeInTheDocument();
     expect(screen.queryByText(/Download MP4/i)).not.toBeInTheDocument();
   });
 

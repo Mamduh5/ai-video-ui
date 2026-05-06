@@ -4,11 +4,16 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { isApiClientError } from "../lib/apiClient";
 import { ArtifactReadinessPanel } from "../features/slideshowJobs/components/ArtifactReadinessPanel";
+import { AudioArtifactViewer } from "../features/slideshowJobs/components/AudioArtifactViewer";
 import { FailurePanel } from "../features/slideshowJobs/components/FailurePanel";
+import { FinalVideoPanel } from "../features/slideshowJobs/components/FinalVideoPanel";
+import { JsonArtifactViewer } from "../features/slideshowJobs/components/JsonArtifactViewer";
 import { JobStatusHeader } from "../features/slideshowJobs/components/JobStatusHeader";
 import { ProgressTimeline } from "../features/slideshowJobs/components/ProgressTimeline";
 import { RequestSummaryCard } from "../features/slideshowJobs/components/RequestSummaryCard";
-import { SlideProgressList } from "../features/slideshowJobs/components/SlideProgressList";
+import { SlideArtifactGrid } from "../features/slideshowJobs/components/SlideArtifactGrid";
+import { TextArtifactViewer } from "../features/slideshowJobs/components/TextArtifactViewer";
+import { getArtifactUrl } from "../features/slideshowJobs/api";
 import { useSlideshowJob } from "../features/slideshowJobs/hooks";
 
 export function JobDetailPage() {
@@ -63,23 +68,44 @@ export function JobDetailPage() {
 
       {data.status === "failed" ? <FailurePanel job={data} /> : null}
 
-      {data.status === "completed" ? (
-        <Card className="border-emerald-200 bg-emerald-50">
-          <h3 className="text-base font-semibold text-emerald-950">
-            Video ready
-          </h3>
-          <p className="mt-1 text-sm text-emerald-800">
-            The job is complete. Final video preview and MP4 download are
-            intentionally deferred to the next artifact phase.
-          </p>
-        </Card>
-      ) : null}
+      <FinalVideoPanel job={data} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="space-y-6">
           <ProgressTimeline job={data} />
           <RequestSummaryCard job={data} />
-          <SlideProgressList slides={data.slides} />
+          <SlideArtifactGrid job={data} />
+          <TextArtifactViewer
+            description="Narration/script artifact returned by the backend."
+            title="Script"
+            url={data.artifacts?.script ? getArtifactUrl(data.id, { type: "script" }) : null}
+          />
+          <div className="grid gap-6 xl:grid-cols-2">
+            <JsonArtifactViewer
+              description="Brief artifact as returned by the backend."
+              title="Brief"
+              url={data.artifacts?.brief ? getArtifactUrl(data.id, { type: "brief" }) : null}
+            />
+            <JsonArtifactViewer
+              description="Slide plan artifact as returned by the backend."
+              title="Plan"
+              url={data.artifacts?.plan ? getArtifactUrl(data.id, { type: "plan" }) : null}
+            />
+          </div>
+          <div className="grid gap-6 xl:grid-cols-2">
+            <AudioArtifactViewer
+              url={data.artifacts?.voice ? getArtifactUrl(data.id, { type: "voice" }) : null}
+            />
+            <JsonArtifactViewer
+              description="Render manifest for the assembled slideshow."
+              title="Render Manifest"
+              url={
+                data.artifacts?.render_manifest
+                  ? getArtifactUrl(data.id, { type: "render_manifest" })
+                  : null
+              }
+            />
+          </div>
         </div>
         <ArtifactReadinessPanel job={data} />
       </div>

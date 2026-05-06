@@ -38,8 +38,8 @@ export function JobStatusHeader({
           </div>
           {job.status === "completed" ? (
             <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
-              Video ready. Preview and download will be added in the artifact
-              phase.
+              Video ready. Preview and download are available below when the
+              video artifact loads.
             </p>
           ) : null}
         </div>
