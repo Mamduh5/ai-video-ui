@@ -25,13 +25,15 @@ Use this stack unless implementation discovers a strong reason to change:
 
 ## Current Status
 
-Status: F3/F4 app shell and create-job flow exist.
+Status: F5 job detail polling and status UI exist.
 
 The React + Vite + TypeScript app shell, routing, Tailwind setup, TanStack Query provider, and basic tests are in place. Typed `/slideshow-video-jobs` API contracts, artifact URL helpers, an API client wrapper, and mocked unit tests also exist.
 
 The create page now includes a structured slideshow job form. When the backend API is running, a valid submit calls `POST /slideshow-video-jobs` and navigates to `/slideshow-jobs/:jobId` after creation.
 
-The recent jobs page and job detail page are still placeholder-level. Job detail polling, artifact viewers, and final video preview are still deferred.
+The job detail page now fetches `GET /slideshow-video-jobs/:id`, polls while jobs are queued or running, stops polling on completed or failed jobs, and shows status, progress, request summary, slide summaries, artifact readiness, and failure details.
+
+The recent jobs page is still placeholder-level because no backend list endpoint is assumed. Artifact body viewers, image/script/plan previews, final video preview, and MP4 download are still deferred.
 
 ## Local Development
 

@@ -1,11 +1,10 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 
 import { createSlideshowJob } from "../features/slideshowJobs/api";
 
 import { CreateJobPage } from "./CreateJobPage";
-import { JobDetailPage } from "./JobDetailPage";
 
 vi.mock("../features/slideshowJobs/api", async (importOriginal) => {
   const actual =
@@ -29,7 +28,7 @@ describe("CreateJobPage", () => {
       <MemoryRouter initialEntries={["/create"]}>
         <Routes>
           <Route path="/create" element={<CreateJobPage />} />
-          <Route path="/slideshow-jobs/:jobId" element={<JobDetailPage />} />
+          <Route path="/slideshow-jobs/:jobId" element={<RouteProbe />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -46,3 +45,8 @@ describe("CreateJobPage", () => {
   });
 });
 
+function RouteProbe() {
+  const { jobId } = useParams<{ jobId: string }>();
+
+  return <div>{jobId}</div>;
+}

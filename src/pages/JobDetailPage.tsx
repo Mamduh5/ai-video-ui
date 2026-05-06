@@ -1,51 +1,181 @@
 import { useParams } from "react-router-dom";
 
+import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
-import { StatusBadge } from "../components/ui/StatusBadge";
+import { isApiClientError } from "../lib/apiClient";
+import { ArtifactReadinessPanel } from "../features/slideshowJobs/components/ArtifactReadinessPanel";
+import { FailurePanel } from "../features/slideshowJobs/components/FailurePanel";
+import { JobStatusHeader } from "../features/slideshowJobs/components/JobStatusHeader";
+import { ProgressTimeline } from "../features/slideshowJobs/components/ProgressTimeline";
+import { RequestSummaryCard } from "../features/slideshowJobs/components/RequestSummaryCard";
+import { SlideProgressList } from "../features/slideshowJobs/components/SlideProgressList";
+import { useSlideshowJob } from "../features/slideshowJobs/hooks";
 
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
+  const { data, error, isError, isLoading, isRefetching, refetch } =
+    useSlideshowJob(jobId);
+
+  if (!jobId) {
+    return (
+      <Card>
+        <h2 className="text-2xl font-semibold">Missing slideshow job ID</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Open a valid `/slideshow-jobs/:jobId` route.
+        </p>
+      </Card>
+    );
+  }
+
+  if (isLoading) {
+    return <JobDetailLoading jobId={jobId} />;
+  }
+
+  if (isError) {
+    return (
+      <JobDetailError
+        error={error}
+        isRefreshing={isRefetching}
+        jobId={jobId}
+        onRefresh={() => void refetch()}
+      />
+    );
+  }
+
+  if (!data) {
+    return (
+      <JobDetailError
+        error={new Error("No job detail returned.")}
+        isRefreshing={isRefetching}
+        jobId={jobId}
+        onRefresh={() => void refetch()}
+      />
+    );
+  }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold">Job Detail</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            This route is ready for created jobs. Polling, status, artifacts,
-            and final video preview are planned for F5/F6/F7.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <JobStatusHeader
+        isRefreshing={isRefetching}
+        job={data}
+        onRefresh={() => void refetch()}
+      />
 
-        <Card>
-          <div className="flex flex-col gap-3">
-            <StatusBadge label="Placeholder" />
-            <h3 className="text-base font-semibold">Slideshow job shell</h3>
-            <p className="text-sm text-slate-600">
-              Route parameter:
-              {" "}
-              <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
-                {jobId ?? "missing"}
-              </code>
-            </p>
-            <p className="max-w-2xl text-sm text-slate-600">
-              This page does not fetch job detail yet. It only confirms the
-              route target after create-job submission.
-            </p>
-          </div>
+      {data.status === "failed" ? <FailurePanel job={data} /> : null}
+
+      {data.status === "completed" ? (
+        <Card className="border-emerald-200 bg-emerald-50">
+          <h3 className="text-base font-semibold text-emerald-950">
+            Video ready
+          </h3>
+          <p className="mt-1 text-sm text-emerald-800">
+            The job is complete. Final video preview and MP4 download are
+            intentionally deferred to the next artifact phase.
+          </p>
         </Card>
-      </div>
+      ) : null}
 
-      <Card className="h-fit">
-        <div className="space-y-3">
-          <h3 className="text-base font-semibold">Planned detail panel</h3>
-          <p className="text-sm text-slate-600">
-            This side panel will eventually show current step, artifact
-            readiness, manual refresh, and friendly error details. No polling is
-            implemented in this slice.
-          </p>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="space-y-6">
+          <ProgressTimeline job={data} />
+          <RequestSummaryCard job={data} />
+          <SlideProgressList slides={data.slides} />
         </div>
-      </Card>
+        <ArtifactReadinessPanel job={data} />
+      </div>
     </div>
   );
+}
+
+function JobDetailLoading({ jobId }: { jobId: string }) {
+  return (
+    <Card>
+      <div className="space-y-3">
+        <h2 className="text-2xl font-semibold">Loading slideshow job</h2>
+        <p className="text-sm text-slate-600">
+          Fetching status for <span className="font-mono">{jobId}</span>.
+        </p>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="h-2 w-1/3 rounded-full bg-slate-300" />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function JobDetailError({
+  error,
+  isRefreshing,
+  jobId,
+  onRefresh,
+}: {
+  error: unknown;
+  isRefreshing?: boolean;
+  jobId: string;
+  onRefresh: () => void;
+}) {
+  const message = getJobLoadErrorMessage(error);
+
+  return (
+    <Card className="border-red-200 bg-red-50">
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-2xl font-semibold text-red-950">
+            Could not load job status
+          </h2>
+          <p className="mt-1 text-sm text-red-800">{message}</p>
+          <p className="mt-2 text-sm text-red-900">
+            Job ID: <span className="font-mono">{jobId}</span>
+          </p>
+        </div>
+        <Button disabled={isRefreshing} onClick={onRefresh} variant="secondary">
+          {isRefreshing ? "Refreshing..." : "Try again"}
+        </Button>
+        <details>
+          <summary className="cursor-pointer text-sm font-medium text-red-900">
+            Technical details
+          </summary>
+          <pre className="mt-2 whitespace-pre-wrap rounded-md bg-white p-3 text-xs text-red-950">
+            {stringifyError(error)}
+          </pre>
+        </details>
+      </div>
+    </Card>
+  );
+}
+
+function getJobLoadErrorMessage(error: unknown) {
+  if (isApiClientError(error)) {
+    if (error.category === "not_found" || error.status === 404) {
+      return "This slideshow job was not found.";
+    }
+
+    if (error.category === "network") {
+      return "Backend is unavailable. Check that the API is running.";
+    }
+  }
+
+  return "Could not load slideshow job status.";
+}
+
+function stringifyError(error: unknown) {
+  if (isApiClientError(error)) {
+    return JSON.stringify(
+      {
+        status: error.status,
+        category: error.category,
+        message: error.message,
+        code: error.code,
+        details: error.details,
+      },
+      null,
+      2,
+    );
+  }
+
+  if (error instanceof Error) {
+    return error.stack ?? error.message;
+  }
+
+  return JSON.stringify(error, null, 2);
 }
