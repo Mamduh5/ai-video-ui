@@ -1,8 +1,8 @@
 # Slideshow Jobs Feature
 
-This directory is reserved for the slideshow job feature implementation.
+This directory contains the slideshow job TypeScript contracts, API helpers,
+artifact URL utilities, and status helpers.
 
-F1 intentionally does not include API clients, hooks, polling, artifact fetching,
-or create-job form logic. Those belong to later phases in
+F2 intentionally does not include React hooks, UI polling, artifact viewers, or
+create-job form logic. Those belong to later phases in
 `docs/implementation-sequence.md`.
-
