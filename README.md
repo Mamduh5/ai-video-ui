@@ -1,6 +1,6 @@
 # Ai Video Pipeline Frontend
 
-This repository is the planned frontend for the Ai Video Pipeline slideshow video product path. It is intentionally starting as a docs-first frontend repository so the product scope, UX, API contracts, architecture, and test strategy are clear before React application code is scaffolded.
+This repository is the planned frontend for the Ai Video Pipeline slideshow video product path. It started as a docs-first frontend repository so the product scope, UX, API contracts, architecture, and test strategy were clear before React application code was scaffolded.
 
 ## Target Backend API
 
@@ -25,9 +25,45 @@ Use this stack unless implementation discovers a strong reason to change:
 
 ## Current Status
 
-Status: docs-first planning. App implementation has not started.
+Status: F1 scaffold exists.
 
-No production app code, components, package installation, backend calls, or app scaffold are included yet.
+The React + Vite + TypeScript app shell, routing, Tailwind setup, TanStack Query provider, and basic tests are in place. Backend API calls, the create-job form, polling, artifact fetching, and final video preview are not implemented yet.
+
+## Local Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Copy the example environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Expected local backend config:
+
+```text
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+Run the dev server:
+
+```bash
+npm run dev
+```
+
+Run validation:
+
+```bash
+npm run typecheck
+npm run test:run
+npm run build
+```
+
+The app does not call the backend yet, but the environment variable is reserved for the later `/slideshow-video-jobs` integration.
 
 ## V1 Goal
 
@@ -55,4 +91,3 @@ Real image and TTS quality depends on later backend provider integration. The fi
 - [V1 Non-Goals](docs/v1-non-goals.md)
 - [Implementation Sequence](docs/implementation-sequence.md)
 - [Testing Plan](docs/testing-plan.md)
-
