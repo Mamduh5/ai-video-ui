@@ -34,6 +34,9 @@ export function AppLayout() {
             <NavLink className={navLinkClass} to="/create">
               Create Video
             </NavLink>
+            <NavLink className={navLinkClass} to="/scene-jobs/create">
+              Flow Scenes
+            </NavLink>
           </nav>
         </div>
       </header>
