@@ -33,10 +33,8 @@ describe("CreateJobPage", () => {
       </MemoryRouter>,
     );
 
-    await user.type(
-      screen.getByLabelText("Topic"),
-      "How photosynthesis works",
-    );
+    await user.click(screen.getByLabelText("Topic"));
+    await user.paste("How photosynthesis works");
     await user.click(screen.getByRole("button", { name: /create slideshow job/i }));
 
     await waitFor(() => {

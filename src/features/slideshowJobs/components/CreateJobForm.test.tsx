@@ -55,14 +55,14 @@ describe("CreateJobForm", () => {
     const onCreated = vi.fn();
     render(<CreateJobForm createJob={createJob} onCreated={onCreated} />);
 
-    await user.type(
-      screen.getByLabelText("Topic"),
-      "How photosynthesis works",
-    );
+    await user.click(screen.getByLabelText("Topic"));
+    await user.paste("How photosynthesis works");
     await user.clear(screen.getByLabelText("Must Include"));
-    await user.type(screen.getByLabelText("Must Include"), "sunlight, leaves");
+    await user.click(screen.getByLabelText("Must Include"));
+    await user.paste("sunlight, leaves");
     await user.clear(screen.getByLabelText("Must Avoid"));
-    await user.type(screen.getByLabelText("Must Avoid"), "watermarks");
+    await user.click(screen.getByLabelText("Must Avoid"));
+    await user.paste("watermarks");
     await user.click(screen.getByRole("button", { name: /create slideshow job/i }));
 
     await waitFor(() => {
@@ -96,10 +96,8 @@ describe("CreateJobForm", () => {
     );
     render(<CreateJobForm createJob={createJob} />);
 
-    await user.type(
-      screen.getByLabelText("Topic"),
-      "How photosynthesis works",
-    );
+    await user.click(screen.getByLabelText("Topic"));
+    await user.paste("How photosynthesis works");
     await user.click(screen.getByRole("button", { name: /create slideshow job/i }));
 
     expect(
@@ -120,10 +118,8 @@ describe("CreateJobForm", () => {
     const onCreated = vi.fn();
     render(<CreateJobForm createJob={createJob} onCreated={onCreated} />);
 
-    await user.type(
-      screen.getByLabelText("Topic"),
-      "How photosynthesis works",
-    );
+    await user.click(screen.getByLabelText("Topic"));
+    await user.paste("How photosynthesis works");
     await user.click(screen.getByRole("button", { name: /create slideshow job/i }));
 
     expect(
