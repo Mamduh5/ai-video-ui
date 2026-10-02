@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
@@ -103,5 +103,98 @@ describe("manual Flow pages", () => {
       expect(input.value).toBe("");
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally { vi.unstubAllGlobals(); }
+  });
+});
+
+describe("R3 media conformance workflow", () => {
+  const media = { duration_seconds: 8, width: 1920, height: 1080, display_aspect_ratio: "16:9", video_codec: "h264", audio_present: true, audio_codec: "aac", audio_channels: 2 };
+  const conformance = { status: "warning", checks: [
+    { field: "aspect_ratio", status: "warning", expected: "9:16", actual: "16:9", severity: "high" },
+    { field: "duration", status: "warning", expected: "4 sec", actual: "8.000 sec", severity: "high" },
+  ] };
+  const job = (decision = "pending", reviewPolicy = "ai_assisted") => ({
+    id: "r3-job", status: "conformance_attention_required", current_step: "media_conformance", review_policy: reviewPolicy,
+    scenes: [{ order: 1, status: "conformance_attention_required", current_attempt: 2, clip_url: "/clip",
+      generation_request: { story_beat: "Opening", visual_description: "Robot", motion_prompt: "Move ahead", character_continuity: "same", environment_continuity: "same", aspect_ratio: "9:16", duration_seconds: 4, generation_attempt: 2 },
+      attempts: [{ attempt: 2, imported_at: "2026-10-02T00:00:00Z", media, conformance, conformance_decision: decision }],
+    }],
+  });
+  function renderJob() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/r3-job"]}><Routes><Route path="/scene-jobs/:jobId" element={<SceneVideoPage />} /></Routes></MemoryRouter></QueryClientProvider>);
+  }
+
+  it("shows exact mismatch and binds Continue Anyway to the current attempt without creative acceptance", async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiJson).mockResolvedValue(job());
+    renderJob();
+    await screen.findByRole("button", { name: "Continue Anyway" });
+    expect(screen.getByText(/It does not accept the scene/)).toBeInTheDocument();
+    expect(screen.getAllByText("Expected: 9:16").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Imported: 16:9").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Expected: 4 sec").length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry AI review" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Import generated MP4")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Continue Anyway" }));
+    expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs/r3-job/scenes/1/attempts/2/conformance/continue", { method: "POST" });
+    expect(vi.mocked(apiJson).mock.calls.some(([path]) => path.endsWith("/accept") || path.endsWith("/review"))).toBe(false);
+  });
+
+  it("Replace Clip preserves history and exposes a fresh MP4 import", async () => {
+    const user = userEvent.setup();
+    let data = job();
+    vi.mocked(apiJson).mockImplementation(async (path) => {
+      if (path.endsWith("/conformance/replace")) {
+        data = { ...job("replace"), status: "awaiting_external_generation", scenes: [{ ...job("replace").scenes[0], status: "awaiting_external_generation", clip_url: "", current_attempt: 0 }] };
+        return { job: data };
+      }
+      return data;
+    });
+    renderJob();
+    await user.click(await screen.findByRole("button", { name: "Replace Clip" }));
+    expect(await screen.findByLabelText("Import generated MP4")).toBeInTheDocument();
+    expect(screen.getByText(/Attempt 2 clip/)).toBeInTheDocument();
+    expect(screen.getByText(/Human media decision: Replace Clip/)).toBeInTheDocument();
+    expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs/r3-job/scenes/1/attempts/2/conformance/replace", { method: "POST" });
+  });
+
+  it("keeps override distinct from AI review and retains retry feedback", async () => {
+    const user = userEvent.setup();
+    let data = job();
+    vi.mocked(apiJson).mockImplementation(async (path) => {
+      if (path.endsWith("/conformance/continue")) {
+        data = { ...job("accepted_override"), status: "awaiting_review", scenes: [{ ...job("accepted_override").scenes[0], status: "review_pending" }] };
+        return { job: data, review_error: "media override saved; AI review failed, use Retry AI review" };
+      }
+      return data;
+    });
+    renderJob();
+    await user.click(await screen.findByRole("button", { name: "Continue Anyway" }));
+    expect(await screen.findByRole("button", { name: "Retry AI review" })).toBeInTheDocument();
+    expect(screen.getAllByText(/Media override accepted/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("alert")).toHaveTextContent("media override saved");
+    expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Continue Anyway" })).not.toBeInTheDocument());
+  });
+
+  it("renders conforming media with AI review and no override action", async () => {
+    const data = job();
+    const reviewed = { ...data.scenes[0].attempts[0], conformance: { status: "pass", checks: [] }, conformance_decision: undefined,
+      review: { verdict: "pass", summary: "Consistent", issues: [], checks: {}, retry_recommended: false, retry_prompt_delta: [], frames: [] } };
+    vi.mocked(apiJson).mockResolvedValue({ ...data, status: "awaiting_human_decision", scenes: [{ ...data.scenes[0], status: "human_decision_required", attempts: [reviewed] }] });
+    renderJob();
+    expect(await screen.findByRole("button", { name: "Accept scene" })).toBeInTheDocument();
+    expect(screen.getAllByText("Media conformance · PASS").length).toBeGreaterThan(0);
+    expect(screen.getByText(/AI visual review/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continue Anyway" })).not.toBeInTheDocument();
+  });
+
+  it("shows conformance decisions for review off without offering AI acceptance", async () => {
+    vi.mocked(apiJson).mockResolvedValue(job("pending", "off"));
+    renderJob();
+    expect(await screen.findByRole("button", { name: "Continue Anyway" })).toBeInTheDocument();
+    expect(screen.getByText("Attempt history")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
   });
 });

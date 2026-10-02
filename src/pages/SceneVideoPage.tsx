@@ -2,6 +2,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiJson, buildApiUrl } from "../lib/apiClient";
+import { MediaConformancePanel, type MediaAttempt } from "./MediaConformancePanel";
 
 type AudioPolicy = "clip_native" | "external_narration" | "silent";
 type ReferenceMode = "none" | "provider_generated" | "manually_imported";
@@ -9,7 +10,7 @@ type ReviewPolicy = "off" | "ai_assisted";
 type ReviewIssue = { category: string; severity: string; description: string; evidence_frames: number[]; previous_evidence_frames?: number[] };
 type ReviewFrame = { index: number; timestamp_seconds: number };
 type Review = { verdict: "pass" | "warning" | "fail"; summary: string; issues: ReviewIssue[]; checks: Record<string, string>; retry_recommended: boolean; retry_prompt_delta: string[]; frames: ReviewFrame[]; previous_frames?: ReviewFrame[]; limitations?: string[] };
-type Attempt = { attempt: number; decision?: string; imported_at: string; review?: Review };
+type Attempt = MediaAttempt & { attempt: number; decision?: string; imported_at: string; review?: Review };
 type Request = { story_beat: string; visual_description: string; image_prompt?: string; first_frame_prompt?: string; motion_prompt: string; audio_intent?: { mode: AudioPolicy; dialogue?: string; sound_effects?: string[]; ambience?: string }; reference_mode?: ReferenceMode; character_continuity: string; environment_continuity: string; aspect_ratio: string; duration_seconds: number; last_frame_description?: string; generation_attempt: number };
 type Scene = { order: number; status: string; generation_request: Request; first_frame_url?: string; clip_url?: string; clip_has_audio?: boolean; current_attempt?: number; attempts?: Attempt[] };
 type SceneJob = { id: string; status: string; current_step: string; audio_policy?: AudioPolicy; reference_mode?: ReferenceMode; review_policy?: ReviewPolicy; error?: string; scenes?: Scene[]; video_url?: string; production_plan_url?: string };
@@ -84,13 +85,24 @@ function SceneCard({ jobId, scene, previousScene, reviewPolicy, onImported }: { 
   const [error, setError] = useState("");
   const request = scene.generation_request;
   const currentAttempt = scene.attempts?.find((attempt) => attempt.attempt === scene.current_attempt);
-  const canImport = reviewPolicy === "off" || !scene.clip_url;
+  const conformancePending = scene.status === "conformance_attention_required";
+  const canImport = !conformancePending && (reviewPolicy === "off" || !scene.clip_url);
   async function act(action: "accept" | "regenerate" | "review") {
     setBusy(true); setError("");
     try {
       await apiJson(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/${action}`, { method: "POST" });
       onImported();
     } catch (cause) { setError(cause instanceof Error ? cause.message : `Could not ${action} scene.`); }
+    finally { setBusy(false); }
+  }
+  async function actConformance(action: "continue" | "replace") {
+    if (!currentAttempt) return;
+    setBusy(true); setError("");
+    try {
+      const result = await apiJson<{ review_error?: string }>(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${currentAttempt.attempt}/conformance/${action}`, { method: "POST" });
+      if (result.review_error) setError(result.review_error);
+      onImported();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not apply media decision."); }
     finally { setBusy(false); }
   }
   async function importClip() {
@@ -133,12 +145,17 @@ function SceneCard({ jobId, scene, previousScene, reviewPolicy, onImported }: { 
     {request.audio_intent && <div className="mt-3 space-y-1 text-sm text-slate-700"><p>Audio intent: {request.audio_intent.mode.replaceAll("_", " ")}</p>{request.audio_intent.dialogue && <p>Dialogue: {request.audio_intent.dialogue}</p>}{request.audio_intent.sound_effects?.length ? <p>Sound effects: {request.audio_intent.sound_effects.join(", ")}</p> : null}{request.audio_intent.ambience && <p>Ambience: {request.audio_intent.ambience}</p>}</div>}
     <a className="mt-4 inline-block text-blue-700 underline" href="https://flow.google.com/" target="_blank" rel="noreferrer">Open Google Flow</a>
     <div className="mt-5 space-y-2 border-t border-slate-200 pt-4"><label className="block text-sm font-medium">{scene.first_frame_url ? "Replace reference PNG" : "Attach reference PNG (optional)"}<input className="mt-2 block w-full text-sm" type="file" accept="image/png,.png" onChange={(event) => setReferenceFile(event.target.files?.[0] ?? null)} /></label><button type="button" disabled={!referenceFile || busy} onClick={() => void importReference()} className="rounded-md border border-slate-300 px-4 py-2 text-sm disabled:opacity-50">{busy ? "Uploadingâ€¦" : "Upload reference"}</button></div>
-    <div className="mt-5 space-y-2 border-t border-slate-200 pt-4">{canImport ? <><label className="block text-sm font-medium">{scene.clip_url ? "Replace scene clip" : "Import generated MP4"}<input ref={fileInputRef} className="mt-2 block w-full text-sm" type="file" accept="video/mp4,.mp4" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label><button type="button" disabled={!file || busy} onClick={() => void importClip()} className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? "Importingâ€¦" : scene.clip_url ? "Replace clip" : "Import MP4"}</button></> : <p className="text-sm text-slate-600">This scene has a clip pending review or already accepted. Use Regenerate to import another attempt.</p>}{error && <p role="alert" className="text-sm text-red-700">{error}</p>}</div>
+    <div className="mt-5 space-y-2 border-t border-slate-200 pt-4">{canImport ? <><label className="block text-sm font-medium">{scene.clip_url ? "Replace scene clip" : "Import generated MP4"}<input ref={fileInputRef} className="mt-2 block w-full text-sm" type="file" accept="video/mp4,.mp4" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label><button type="button" disabled={!file || busy} onClick={() => void importClip()} className="rounded-md bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? "Importingâ€¦" : scene.clip_url ? "Replace clip" : "Import MP4"}</button></> : <p className="text-sm text-slate-600">{conformancePending ? "Resolve the media check below to continue or replace this clip." : "This scene has a clip pending review or already accepted. Use Regenerate to import another attempt."}</p>}{error && <p role="alert" className="text-sm text-red-700">{error}</p>}</div>
     {scene.clip_url && <video controls className="mt-4 w-full max-w-xl" src={buildApiUrl(scene.clip_url)} />}
     {scene.clip_url && scene.clip_has_audio !== undefined && <p className="mt-2 text-sm text-slate-600">Imported clip audio: {scene.clip_has_audio ? "present" : "absent"}</p>}
+    {currentAttempt?.conformance && <MediaConformancePanel attempt={currentAttempt}>{conformancePending && <div className="mt-4 space-y-3">
+      <p className="text-sm">{reviewPolicy === "ai_assisted" ? "Continue Anyway means: keep this media despite the mismatch and continue to AI visual review. It does not accept the scene for final assembly." : "Continue Anyway keeps this media despite the mismatch. AI review is off; assembly can proceed when all clips pass or have a media override."}</p>
+      <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void actConformance("replace")} className="rounded border border-slate-400 px-4 py-2 text-sm disabled:opacity-50">Replace Clip</button><button type="button" disabled={busy} onClick={() => void actConformance("continue")} className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50">Continue Anyway</button></div>
+      {busy && <p role="status" className="text-sm">{reviewPolicy === "ai_assisted" ? "Applying media decision; AI review may take a moment…" : "Applying media decision; assembly may take a moment…"}</p>}
+    </div>}</MediaConformancePanel>}
     {reviewPolicy === "ai_assisted" && scene.status === "review_pending" && <div className="mt-4 rounded-md bg-amber-50 p-4"><p>Review pending. The imported clip is preserved.</p><button type="button" disabled={busy} onClick={() => void act("review")} className="mt-2 rounded-md border px-3 py-2">Retry AI review</button></div>}
     {reviewPolicy === "ai_assisted" && currentAttempt?.review && <ReviewPanel jobId={jobId} scene={scene} previousScene={previousScene} attempt={currentAttempt} busy={busy} onAction={act} />}
-    {reviewPolicy === "ai_assisted" && (scene.attempts?.length ?? 0) > 0 && <div className="mt-6 border-t pt-4"><h4 className="font-semibold">Attempt history</h4><ul className="mt-2 space-y-2">{scene.attempts?.map((attempt) => <li key={attempt.attempt} className="text-sm"><details><summary className="cursor-pointer">Attempt {attempt.attempt} · {attempt.review?.verdict?.toUpperCase() ?? "review pending"} · {attempt.decision ?? "no decision"}</summary><a className="mt-2 block text-blue-700 underline" href={buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/clip`)} target="_blank" rel="noreferrer">Attempt {attempt.attempt} clip</a>{attempt.review && <><p className="mt-2">{attempt.review.summary}</p><ul>{attempt.review.issues.map((issue, index) => <li key={index}>{issue.description}</li>)}</ul>{attempt.review.frames.map((frame) => <a key={frame.index} className="mr-3 text-blue-700 underline" href={buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/frames/${frame.index}`)} target="_blank" rel="noreferrer">Frame {frame.index}</a>)}{attempt.review.retry_prompt_delta.length > 0 && <div className="mt-2"><pre className="whitespace-pre-wrap bg-white p-2">{attempt.review.retry_prompt_delta.join("\n")}</pre><button type="button" className="mt-2 rounded border px-2 py-1" onClick={() => void navigator.clipboard.writeText(attempt.review?.retry_prompt_delta.join("\n") ?? "")}>Copy retry suggestions</button></div>}</>}</details></li>)}</ul></div>}
+    {(scene.attempts?.length ?? 0) > 0 && <div className="mt-6 border-t pt-4"><h4 className="font-semibold">Attempt history</h4><ul className="mt-2 space-y-2">{scene.attempts?.map((attempt) => <li key={attempt.attempt} className="text-sm"><details><summary className="cursor-pointer">Attempt {attempt.attempt} · Media: {attempt.conformance?.status.toUpperCase() ?? "historical / not recorded"} · AI: {attempt.review?.verdict?.toUpperCase() ?? (reviewPolicy === "off" ? "off" : "not reviewed")} · Scene: {attempt.decision ?? "no creative decision"}</summary><a className="mt-2 block text-blue-700 underline" href={buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/clip`)} target="_blank" rel="noreferrer">Attempt {attempt.attempt} clip</a><MediaConformancePanel attempt={attempt} />{attempt.review && <><p className="mt-2">{attempt.review.summary}</p><ul>{attempt.review.issues.map((issue, index) => <li key={index}>{issue.description}</li>)}</ul>{attempt.review.frames.map((frame) => <a key={frame.index} className="mr-3 text-blue-700 underline" href={buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/frames/${frame.index}`)} target="_blank" rel="noreferrer">Frame {frame.index}</a>)}{attempt.review.retry_prompt_delta.length > 0 && <div className="mt-2"><pre className="whitespace-pre-wrap bg-white p-2">{attempt.review.retry_prompt_delta.join("\n")}</pre><button type="button" className="mt-2 rounded border px-2 py-1" onClick={() => void navigator.clipboard.writeText(attempt.review?.retry_prompt_delta.join("\n") ?? "")}>Copy retry suggestions</button></div>}</>}</details></li>)}</ul></div>}
   </section>;
 }
 
