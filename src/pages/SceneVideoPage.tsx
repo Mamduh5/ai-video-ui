@@ -3,6 +3,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiJson, buildApiUrl } from "../lib/apiClient";
 import { MediaConformancePanel, type MediaAttempt } from "./MediaConformancePanel";
+import { shouldPollSceneJob } from "./sceneReviewExecution";
 
 type AudioPolicy = "clip_native" | "external_narration" | "silent";
 type ReferenceMode = "none" | "provider_generated" | "manually_imported";
@@ -10,7 +11,8 @@ type ReviewPolicy = "off" | "ai_assisted";
 type ReviewIssue = { category: string; severity: string; description: string; evidence_frames: number[]; previous_evidence_frames?: number[] };
 type ReviewFrame = { index: number; timestamp_seconds: number };
 type Review = { verdict: "pass" | "warning" | "fail"; summary: string; issues: ReviewIssue[]; checks: Record<string, string>; retry_recommended: boolean; retry_prompt_delta: string[]; frames: ReviewFrame[]; previous_frames?: ReviewFrame[]; limitations?: string[] };
-type Attempt = MediaAttempt & { attempt: number; decision?: string; imported_at: string; review?: Review };
+type ReviewRun = { run_id: string; status: "queued" | "running" | "completed" | "failed"; failure?: string; queued_at: string; started_at?: string; finished_at?: string; retry_count: number };
+type Attempt = MediaAttempt & { review_runs?: ReviewRun[]; attempt: number; decision?: string; imported_at: string; review?: Review };
 type Request = { story_beat: string; visual_description: string; image_prompt?: string; first_frame_prompt?: string; motion_prompt: string; audio_intent?: { mode: AudioPolicy; dialogue?: string; sound_effects?: string[]; ambience?: string }; reference_mode?: ReferenceMode; character_continuity: string; environment_continuity: string; aspect_ratio: string; duration_seconds: number; last_frame_description?: string; generation_attempt: number };
 type Scene = { order: number; status: string; generation_request: Request; first_frame_url?: string; clip_url?: string; clip_has_audio?: boolean; current_attempt?: number; attempts?: Attempt[] };
 type SceneJob = { id: string; status: string; current_step: string; audio_policy?: AudioPolicy; reference_mode?: ReferenceMode; review_policy?: ReviewPolicy; error?: string; scenes?: Scene[]; video_url?: string; production_plan_url?: string };
@@ -54,7 +56,7 @@ export function SceneVideoPage() {
     queryKey: ["sceneVideoJob", jobId],
     queryFn: () => apiJson<SceneJob>(`/scene-video-jobs/${encodeURIComponent(jobId ?? "")}`),
     enabled: Boolean(jobId),
-    refetchInterval: (state) => ["pending", "running"].includes(state.state.data?.status ?? "") ? 2000 : false,
+    refetchInterval: (state) => shouldPollSceneJob(state.state.data) ? 2000 : false,
   });
   if (!jobId) return <p>Scene-video job ID is missing.</p>;
   if (query.isLoading) return <p>Loading scene-video jobâ€¦</p>;
@@ -87,10 +89,11 @@ function SceneCard({ jobId, scene, previousScene, reviewPolicy, onImported }: { 
   const currentAttempt = scene.attempts?.find((attempt) => attempt.attempt === scene.current_attempt);
   const conformancePending = scene.status === "conformance_attention_required";
   const canImport = !conformancePending && (reviewPolicy === "off" || !scene.clip_url);
-  async function act(action: "accept" | "regenerate" | "review") {
+  async function act(action: "accept" | "regenerate" | "review" | "retry") {
     setBusy(true); setError("");
     try {
-      await apiJson(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/${action}`, { method: "POST" });
+      const path = action === "retry" ? `attempts/${currentAttempt?.attempt}/review/retry` : action;
+      await apiJson(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/${path}`, { method: "POST" });
       onImported();
     } catch (cause) { setError(cause instanceof Error ? cause.message : `Could not ${action} scene.`); }
     finally { setBusy(false); }
@@ -151,16 +154,16 @@ function SceneCard({ jobId, scene, previousScene, reviewPolicy, onImported }: { 
     {currentAttempt?.conformance && <MediaConformancePanel attempt={currentAttempt}>{conformancePending && <div className="mt-4 space-y-3">
       <p className="text-sm">{reviewPolicy === "ai_assisted" ? "Continue Anyway means: keep this media despite the mismatch and continue to AI visual review. It does not accept the scene for final assembly." : "Continue Anyway keeps this media despite the mismatch. AI review is off; assembly can proceed when all clips pass or have a media override."}</p>
       <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void actConformance("replace")} className="rounded border border-slate-400 px-4 py-2 text-sm disabled:opacity-50">Replace Clip</button><button type="button" disabled={busy} onClick={() => void actConformance("continue")} className="rounded bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50">Continue Anyway</button></div>
-      {busy && <p role="status" className="text-sm">{reviewPolicy === "ai_assisted" ? "Applying media decision; AI review may take a moment…" : "Applying media decision; assembly may take a moment…"}</p>}
+      {busy && <p role="status" className="text-sm">{reviewPolicy === "ai_assisted" ? "Saving media decision and queueing AI review…" : "Applying media decision; assembly may take a moment…"}</p>}
     </div>}</MediaConformancePanel>}
-    {reviewPolicy === "ai_assisted" && scene.status === "review_pending" && <div className="mt-4 rounded-md bg-amber-50 p-4"><p>Review pending. The imported clip is preserved.</p><button type="button" disabled={busy} onClick={() => void act("review")} className="mt-2 rounded-md border px-3 py-2">Retry AI review</button></div>}
-    {reviewPolicy === "ai_assisted" && currentAttempt?.review && <ReviewPanel jobId={jobId} scene={scene} previousScene={previousScene} attempt={currentAttempt} busy={busy} onAction={act} />}
-    {(scene.attempts?.length ?? 0) > 0 && <div className="mt-6 border-t pt-4"><h4 className="font-semibold">Attempt history</h4><ul className="mt-2 space-y-2">{scene.attempts?.map((attempt) => <li key={attempt.attempt} className="text-sm"><details><summary className="cursor-pointer">Attempt {attempt.attempt} · Media: {attempt.conformance?.status.toUpperCase() ?? "historical / not recorded"} · AI: {attempt.review?.verdict?.toUpperCase() ?? (reviewPolicy === "off" ? "off" : "not reviewed")} · Scene: {attempt.decision ?? "no creative decision"}</summary><a className="mt-2 block text-blue-700 underline" href={buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/clip`)} target="_blank" rel="noreferrer">Attempt {attempt.attempt} clip</a><MediaConformancePanel attempt={attempt} />{attempt.review && <><p className="mt-2">{attempt.review.summary}</p><ul>{attempt.review.issues.map((issue, index) => <li key={index}>{issue.description}</li>)}</ul>{attempt.review.frames.map((frame) => <a key={frame.index} className="mr-3 text-blue-700 underline" href={buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/frames/${frame.index}`)} target="_blank" rel="noreferrer">Frame {frame.index}</a>)}{attempt.review.retry_prompt_delta.length > 0 && <div className="mt-2"><pre className="whitespace-pre-wrap bg-white p-2">{attempt.review.retry_prompt_delta.join("\n")}</pre><button type="button" className="mt-2 rounded border px-2 py-1" onClick={() => void navigator.clipboard.writeText(attempt.review?.retry_prompt_delta.join("\n") ?? "")}>Copy retry suggestions</button></div>}</>}</details></li>)}</ul></div>}
+    {reviewPolicy === "ai_assisted" && currentAttempt && !conformancePending && <ReviewExecutionPanel attempt={currentAttempt} busy={busy} onRetry={() => void act(currentAttempt.review_runs?.length ? "retry" : "review")} />}
+    {reviewPolicy === "ai_assisted" && currentAttempt?.review && (!currentAttempt.review_runs?.length || currentAttempt.review_runs.at(-1)?.status === "completed") && !conformancePending && <ReviewPanel jobId={jobId} scene={scene} previousScene={previousScene} attempt={currentAttempt} busy={busy} onAction={act} />}
+    {(scene.attempts?.length ?? 0) > 0 && <div className="mt-6 border-t pt-4"><h4 className="font-semibold">Attempt history</h4><ul className="mt-2 space-y-2">{scene.attempts?.map((attempt) => <li key={attempt.attempt} className="text-sm"><details><summary className="cursor-pointer">Attempt {attempt.attempt} · Media: {attempt.conformance?.status.toUpperCase() ?? "historical / not recorded"} · AI: {attempt.review?.verdict?.toUpperCase() ?? (reviewPolicy === "off" ? "off" : "not reviewed")} · Scene: {attempt.decision ?? "no creative decision"}</summary><a className="mt-2 block text-blue-700 underline" href={buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/clip`)} target="_blank" rel="noreferrer">Attempt {attempt.attempt} clip</a><MediaConformancePanel attempt={attempt} />{attempt.review && <><p className="mt-2">{attempt.review.summary}</p><ul>{(attempt.review.issues ?? []).map((issue, index) => <li key={index}>{issue.description}</li>)}</ul>{(attempt.review.frames ?? []).map((frame) => <a key={frame.index} className="mr-3 text-blue-700 underline" href={buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/frames/${frame.index}`)} target="_blank" rel="noreferrer">Frame {frame.index}</a>)}{(attempt.review.retry_prompt_delta?.length ?? 0) > 0 && <div className="mt-2"><pre className="whitespace-pre-wrap bg-white p-2">{attempt.review.retry_prompt_delta.join("\n")}</pre><button type="button" className="mt-2 rounded border px-2 py-1" onClick={() => void navigator.clipboard.writeText(attempt.review?.retry_prompt_delta?.join("\n") ?? "")}>Copy retry suggestions</button></div>}</>}</details></li>)}</ul></div>}
   </section>;
 }
 
 function ReviewPanel({ jobId, scene, previousScene, attempt, busy, onAction }: { jobId: string; scene: Scene; previousScene?: Scene; attempt: Attempt; busy: boolean; onAction: (action: "accept" | "regenerate" | "review") => Promise<void> }) {
-  const review = attempt.review;
+  const review = attempt.review ? { ...attempt.review, issues: attempt.review.issues ?? [], retry_prompt_delta: attempt.review.retry_prompt_delta ?? [], frames: attempt.review.frames ?? [], checks: attempt.review.checks ?? {} } : undefined;
   if (!review) return null;
   const frameUrl = (index: number) => buildApiUrl(`/scene-video-jobs/${encodeURIComponent(jobId)}/scenes/${scene.order}/attempts/${attempt.attempt}/frames/${index}`);
   const previousAccepted = previousScene?.attempts?.find((item) => item.decision === "accepted");
@@ -173,10 +176,26 @@ function ReviewPanel({ jobId, scene, previousScene, attempt, busy, onAction }: {
     <p className="mt-1 text-xs text-slate-600">Advisory result. Your Accept or Regenerate decision controls assembly.</p>
     <p className="mt-2 text-sm">{review.summary}</p>
     <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">{Object.entries(review.checks).map(([name, verdict]) => <div key={name}><dt className="inline font-medium">{name.replaceAll("_", " ")}: </dt><dd className="inline">{verdict.replaceAll("_", " ")}</dd></div>)}</dl>
-    {review.issues.length > 0 && <div className="mt-4"><h5 className="font-medium">Issues</h5><ul className="mt-2 space-y-3">{review.issues.map((issue, index) => <li key={index} className="text-sm"><strong>{issue.category.replaceAll("_", " ")} · {issue.severity}</strong><p>{issue.description}</p><div className="mt-2 flex flex-wrap gap-2">{issue.previous_evidence_frames?.map((frame) => { const url = previousFrameUrl(frame); return url ? <a key={`previous-${frame}`} href={url} target="_blank" rel="noreferrer" className="block"><img className="h-24 max-w-36 rounded object-contain" src={url} alt={`Previous accepted scene evidence frame ${frame}`} /><span className="text-xs text-blue-700 underline">Previous frame {frame}</span></a> : null; })}{issue.evidence_frames.map((frame) => <a key={frame} href={frameUrl(frame)} target="_blank" rel="noreferrer" className="block"><img className="h-24 max-w-36 rounded object-contain" src={frameUrl(frame)} alt={`Scene ${scene.order} evidence frame ${frame}`} /><span className="text-xs text-blue-700 underline">Current frame {frame} · {review.frames.find((item) => item.index === frame)?.timestamp_seconds.toFixed(2)}s</span></a>)}</div></li>)}</ul></div>}
+    {review.issues.length > 0 && <div className="mt-4"><h5 className="font-medium">Issues</h5><ul className="mt-2 space-y-3">{review.issues.map((issue, index) => <li key={index} className="text-sm"><strong>{issue.category.replaceAll("_", " ")} · {issue.severity}</strong><p>{issue.description}</p><div className="mt-2 flex flex-wrap gap-2">{issue.previous_evidence_frames?.map((frame) => { const url = previousFrameUrl(frame); return url ? <a key={`previous-${frame}`} href={url} target="_blank" rel="noreferrer" className="block"><img className="h-24 max-w-36 rounded object-contain" src={url} alt={`Previous accepted scene evidence frame ${frame}`} /><span className="text-xs text-blue-700 underline">Previous frame {frame}</span></a> : null; })}{(issue.evidence_frames ?? []).map((frame) => <a key={frame} href={frameUrl(frame)} target="_blank" rel="noreferrer" className="block"><img className="h-24 max-w-36 rounded object-contain" src={frameUrl(frame)} alt={`Scene ${scene.order} evidence frame ${frame}`} /><span className="text-xs text-blue-700 underline">Current frame {frame} · {review.frames.find((item) => item.index === frame)?.timestamp_seconds.toFixed(2)}s</span></a>)}</div></li>)}</ul></div>}
     {review.retry_prompt_delta.length > 0 && <div className="mt-4"><h5 className="font-medium">Suggested Flow prompt additions</h5><pre className="mt-2 whitespace-pre-wrap rounded bg-white p-3 text-sm">{review.retry_prompt_delta.join("\n")}</pre><button type="button" onClick={() => void navigator.clipboard.writeText(review.retry_prompt_delta.join("\n"))} className="mt-2 rounded border px-3 py-2 text-sm">Copy suggestions</button></div>}
     <p className="mt-3 text-xs text-slate-600">Sampled still frames cannot establish audio quality, dialogue, smooth motion, full action, or lip sync.</p>
     {!attempt.decision && <div className="mt-4 flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void onAction("accept")} className="rounded bg-green-800 px-4 py-2 text-sm text-white">Accept scene</button><button type="button" disabled={busy} onClick={() => void onAction("regenerate")} className="rounded border border-slate-400 px-4 py-2 text-sm">Regenerate in Flow</button></div>}
     {attempt.decision && <p className="mt-4 text-sm font-medium">Human decision: {attempt.decision}</p>}
+  </div>;
+}
+
+
+function ReviewExecutionPanel({ attempt, busy, onRetry }: { attempt: Attempt; busy: boolean; onRetry: () => void }) {
+  const run = attempt.review_runs?.at(-1);
+  const status = run?.status ?? (attempt.review ? "completed" : "not_requested");
+  return <div className="mt-5 rounded-lg border border-slate-300 bg-slate-50 p-4">
+    <h4 className="font-semibold">AI review execution</h4>
+    {status === "queued" && <p role="status" className="mt-2">Queued…</p>}
+    {status === "running" && <p role="status" className="mt-2">Reviewing scene…</p>}
+    {["queued", "running"].includes(status) && <p className="mt-2 text-sm text-slate-600">The clip is stored safely. You can leave or reload this page.</p>}
+    {status === "failed" && <><p className="mt-2 font-medium text-red-700">Review failed</p><p className="mt-2 text-sm">{run?.failure}</p><p className="mt-2 text-sm text-slate-600">Your clip and media checks are unchanged. Assembly requires a completed review and your acceptance.</p></>}
+    {["failed", "not_requested"].includes(status) && <button type="button" disabled={busy} onClick={onRetry} className="mt-3 rounded border px-3 py-2 text-sm disabled:opacity-50">{busy ? "Queueing AI review…" : "Retry AI review"}</button>}
+    {status === "completed" && <p className="mt-2 text-sm">Review completed. Your creative decision remains separate.</p>}
+    {attempt.review_runs?.length ? <details className="mt-3 text-sm"><summary>Review runs ({attempt.review_runs.length})</summary><ol className="mt-2 space-y-2">{attempt.review_runs.map((item, index) => <li key={item.run_id}>#{index + 1} · {item.status}{item.failure ? ` · ${item.failure}` : ""}{item.started_at && item.finished_at ? ` · ${Math.max(0, Math.round((Date.parse(item.finished_at) - Date.parse(item.started_at)) / 1000))}s` : ""}</li>)}</ol></details> : null}
   </div>;
 }
