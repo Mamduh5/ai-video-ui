@@ -198,3 +198,26 @@ describe("R3 media conformance workflow", () => {
     expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
   });
 });
+
+
+describe("R7 accepted scene correction", () => {
+ it.each([false, true])("offers replacement only before a dependent run (dependent=%s)", async (dependent) => {
+  vi.mocked(apiJson).mockClear();
+  const request = { story_beat:"Enter",motion_prompt:"Enter then stop",duration_seconds:8,aspect_ratio:"16:9",generation_attempt:1 };
+  const job = {id:"r7-reopen",generation_provider:"flow_web",continuity_mode:"chained_frames",review_policy:"ai_assisted",status:"awaiting_external_generation",current_step:"awaiting_external_generation",scenes:[
+   {order:1,status:"accepted",clip_url:"/clip",current_attempt:1,generation_request:request,attempts:[{attempt:1,decision:"accepted",imported_at:"2026-10-09T00:00:00Z",review:{verdict:"warning",summary:"Facing correction",checks:{},issues:[],retry_prompt_delta:["Keep facing inward"],frames:[]},decision_history:[{decision:"accepted",at:"2026-10-09T00:00:00Z"}]}]},
+   {order:2,status:"waiting",generation_request:request,flow_runs:dependent?[{run_id:"dependent",status:"queued"}]:[]}
+  ]};
+  vi.mocked(apiJson).mockResolvedValue(job);
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/r7-reopen"]}><Routes><Route path="/scene-jobs/:jobId" element={<SceneVideoPage/>}/></Routes></MemoryRouter></QueryClientProvider>);
+  await screen.findByText("Human decision: accepted");
+  const button=screen.queryByRole("button",{name:"Replace accepted scene with review corrections"});
+  if(dependent){expect(button).not.toBeInTheDocument();return;}
+  expect(button).toBeInTheDocument();
+  expect(screen.getByLabelText("Human decision history")).toHaveTextContent("accepted");
+  await userEvent.setup().click(button!);
+  expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs/r7-reopen/scenes/1/regenerate",{method:"POST",body:{apply_review_corrections:true}});
+  expect(vi.mocked(apiJson).mock.calls.some(([path])=>path.endsWith("/accept")||path.endsWith("/flow/generate"))).toBe(false);
+ });
+});

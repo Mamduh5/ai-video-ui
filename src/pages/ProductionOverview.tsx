@@ -2,9 +2,9 @@ import { useRef, useState } from "react";
 import { apiJson } from "../lib/apiClient";
 
 export type SceneProduction = { order: number; status: string; can_generate: boolean; can_resume_flow: boolean; flow_submissions: number; uncertain_submissions: number; attempt_count: number };
-export type Production = { mode: string; status: string; started: boolean; paused: boolean; auto_advance_after_accept: boolean; scene_count: number; accepted_count: number; current_scene: number; flow_submissions: number; uncertain_submissions: number; scenes: SceneProduction[] };
+export type Production = { continuity_mode?: string; plan_error?: string; mode: string; status: string; started: boolean; paused: boolean; auto_advance_after_accept: boolean; scene_count: number; accepted_count: number; current_scene: number; flow_submissions: number; uncertain_submissions: number; scenes: SceneProduction[] };
 
-const labels: Record<string, string> = { waiting: "Waiting", eligible: "Ready to generate", flow_queued: "Flow queued", flow_generating: "Flow generating", media_attention_required: "Media decision required", ai_review_queued: "AI review queued", ai_review_running: "AI review running", awaiting_acceptance: "Human acceptance required", accepted: "Accepted", regenerate_requested: "Generate again requires your action", failed: "Review failed", attention_required: "Attention required" };
+const labels: Record<string, string> = { handoff_required: "Select a continuity frame and Continue from the accepted scene", waiting: "Waiting", eligible: "Ready to generate", flow_queued: "Flow queued", flow_generating: "Flow generating", media_attention_required: "Media decision required", ai_review_queued: "AI review queued", ai_review_running: "AI review running", awaiting_acceptance: "Human acceptance required", accepted: "Accepted", regenerate_requested: "Generate again requires your action", failed: "Review failed", attention_required: "Attention required" };
 
 export function ProductionOverview({ jobId, production, settings, onChanged }: { jobId: string; production: Production; settings: { order: number; duration_seconds: number; aspect_ratio: string }[]; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
@@ -34,7 +34,7 @@ export function ProductionOverview({ jobId, production, settings, onChanged }: {
     <p className="text-sm">Flow submissions: {production.flow_submissions}. Actual credits spent are unknown.</p>
     {!production.started && <>
       <ul className="text-sm">{settings.map(scene => <li key={scene.order}>Scene {scene.order}: {scene.duration_seconds} seconds, {scene.aspect_ratio}</li>)}</ul>
-      <label className="block text-sm"><input type="checkbox" checked={autoAdvance} disabled={busy} onChange={event => setAutoAdvance(event.target.checked)} /> Automatically queue the next scene after I accept</label>
+      <label className="block text-sm"><input type="checkbox" checked={autoAdvance} disabled={busy} onChange={event => setAutoAdvance(event.target.checked)} /> {production.continuity_mode === "chained_frames" ? "Queue the next scene after I accept and Continue with a handoff frame" : "Automatically queue the next scene after I accept"}</label>
       <p className="text-sm text-amber-800">Start authorizes this sequential session. Flow generation can consume subscription credits. Regeneration always needs another deliberate action.</p>
       <button type="button" disabled={busy || production.scene_count === 0 || production.status !== "ready"} onClick={() => void control("start")} className="rounded-md bg-slate-900 px-4 py-2 text-white disabled:opacity-50">Start Production</button>
     </>}
@@ -42,6 +42,7 @@ export function ProductionOverview({ jobId, production, settings, onChanged }: {
       <button type="button" disabled={busy} onClick={() => void control(production.paused ? "resume" : "pause")} className="rounded-md border px-4 py-2 disabled:opacity-50">{production.paused ? "Resume Production" : "Pause Production"}</button>
       <p className="text-sm">{production.paused ? "Paused: no next Flow submission. An already submitted scene continues safely." : "The next scene will not generate until you accept the current scene. Pause prevents future submissions."}</p>
     </>}
+    {production.plan_error && <p role="alert" className="text-red-700">Plan needs correction: {production.plan_error}</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
   </section>;
 }
