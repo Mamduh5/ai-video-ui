@@ -8,7 +8,7 @@ afterEach(() => vi.unstubAllGlobals());
 function show(runs?: Parameters<typeof FlowGenerationPanel>[0]["runs"]) { const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); const changed = vi.fn(); render(<QueryClientProvider client={client}><FlowGenerationPanel jobId="job" order={1} runs={runs} hasClip={false} onChanged={changed} /></QueryClientProvider>); return changed; }
 describe("Flow generation", () => {
  it("requests one durable run from the actual button and polling only reads status", async () => { const calls: string[] = []; vi.stubGlobal("fetch", vi.fn(async (url: string) => { calls.push(url); return new Response(JSON.stringify(url.includes("readiness") ? { status: "ready" } : { job: {} }), { status: 200, headers: { "Content-Type": "application/json" } }); })); const changed = show(); const button = await screen.findByRole("button", { name: "Generate in Flow" }); await waitFor(() => expect(button).toBeEnabled()); await userEvent.click(button); expect(calls.filter(url => url.endsWith("/flow/generate"))).toHaveLength(1); expect(changed).toHaveBeenCalledOnce(); expect(shouldPollSceneJob({ status: "awaiting_external_generation", scenes: [{ flow_runs: [{ status: "generating" }] }] })).toBe(true); expect(shouldPollSceneJob({ status: "awaiting_human_decision", scenes: [{ flow_runs: [{ status: "completed" }] }] })).toBe(false); });
- it("resumes an uncertain run explicitly with reconciliation wording", async () => { const calls: string[] = []; vi.stubGlobal("fetch", vi.fn(async (url: string) => { calls.push(url); return new Response(JSON.stringify({ status: "ready" }), { status: 200, headers: { "Content-Type": "application/json" } }); })); show([{ run_id: "run", status: "human_action_required", submission_intent: true, failure: "generation_submission_uncertain" }]); expect(screen.getByText(/never clicks Generate again/)).toBeInTheDocument(); await userEvent.click(screen.getByRole("button", { name: "Resume" })); expect(calls.some(url => url.endsWith("/flow/resume"))).toBe(true); expect(calls.some(url => url.endsWith("/flow/generate"))).toBe(false); });
+ it("resumes an uncertain run explicitly with reconciliation wording", async () => { const calls: string[] = []; vi.stubGlobal("fetch", vi.fn(async (url: string) => { calls.push(url); return new Response(JSON.stringify({ status: "ready" }), { status: 200, headers: { "Content-Type": "application/json" } }); })); show([{ run_id: "run", status: "human_action_required", submission_intent: true, failure: "generation_submission_uncertain" }]); expect(screen.getByText(/never clicks Generate again/)).toBeInTheDocument(); await userEvent.click(screen.getByRole("button", { name: "Retry Flow" })); expect(calls.some(url => url.endsWith("/flow/resume"))).toBe(true); expect(calls.some(url => url.endsWith("/flow/generate"))).toBe(false); });
 });
 
 it("requires possible-charge acknowledgment and resolves without issuing Generate", async () => {
@@ -21,4 +21,18 @@ it("requires possible-charge acknowledgment and resolves without issuing Generat
  const request=requests.find(r=>r.url.endsWith("/flow/reconcile-no-result"));
  expect(JSON.parse(request?.body??"null")).toEqual({run_id:"uncertain",acknowledge_possible_charge:true});
  expect(requests.some(r=>r.url.endsWith("/flow/generate"))).toBe(false);
+});
+
+it("prepares human regeneration instructions without submitting a Flow run", async () => {
+ const requests: string[]=[];
+ vi.stubGlobal("fetch",vi.fn(async(url:string)=>{requests.push(url);return new Response(JSON.stringify({status:"ready"}),{headers:{"Content-Type":"application/json"}})}));
+ const client=new QueryClient({defaultOptions:{queries:{retry:false}}});const changed=vi.fn();
+ render(<QueryClientProvider client={client}><FlowGenerationPanel jobId="job" order={1} runs={[{run_id:"rejected",status:"completed",submission_intent:true}]} hasClip={false} canGenerate={false} regenerationInstructions="Seat the crystal visibly in its socket." onChanged={changed}/></QueryClientProvider>);
+ await userEvent.click(screen.getByRole("button",{name:"Prepare regeneration instructions"}));
+ expect(screen.getByRole("textbox")).toHaveValue("Seat the crystal visibly in its socket.");
+ await userEvent.click(screen.getByRole("button",{name:"Save regeneration instructions"}));
+ await waitFor(()=>expect(changed).toHaveBeenCalledOnce());
+ expect(requests.filter(url=>url.endsWith("/generation-request/revise"))).toHaveLength(1);
+ expect(requests.some(url=>url.endsWith("/flow/generate"))).toBe(false);
+ expect(screen.getByRole("button",{name:"Generate Again"})).toBeDisabled();
 });
