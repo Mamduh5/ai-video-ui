@@ -12,35 +12,29 @@ vi.mock("../lib/apiClient", async (importOriginal) => ({
 }));
 
 describe("manual Flow pages", () => {
-  it("creates a separate scene-video job", async () => {
-    vi.mocked(apiJson).mockResolvedValueOnce({ job_id: "scene-1" });
-    const user = userEvent.setup();
-    render(<MemoryRouter initialEntries={["/scene-jobs/create"]}><Routes>
-      <Route path="/scene-jobs/create" element={<CreateSceneVideoPage />} />
-      <Route path="/scene-jobs/:jobId" element={<p>Created scene job</p>} />
-    </Routes></MemoryRouter>);
-    await user.type(screen.getByLabelText("Character"), "guide");
-    await user.type(screen.getByLabelText("Story topic"), "rain");
-    await user.click(screen.getByRole("button", { name: "Create scene-video job" }));
+  it("creates a Standard Video without opening Advanced", async () => {
+    vi.mocked(apiJson).mockImplementation(async path => path === "/scene-video-options" ? {standard_available:true,scene_seconds:8,initial_keyframe_enabled:true} : {job_id:"scene-1"});
+    const user=userEvent.setup(); const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/create"]}><Routes><Route path="/scene-jobs/create" element={<CreateSceneVideoPage/>}/><Route path="/scene-jobs/:jobId" element={<p>Created scene job</p>}/></Routes></MemoryRouter></QueryClientProvider>);
+    expect(screen.getByText("Advanced settings").closest("details")).not.toHaveAttribute("open");
+    await user.type(screen.getByLabelText(/Video title/),"Crystal Robot");
+    await user.type(screen.getByLabelText("Idea / story"),"rain");
+    await user.click(await screen.findByRole("button",{name:"Generate Storyboard"}));
     expect(await screen.findByText("Created scene job")).toBeInTheDocument();
-    expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs", { method: "POST", body: { character: "guide", topic: "rain", scene_count: 4, audio_policy: "clip_native", reference_mode: "none", review_policy: "off" } });
+    expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",{method:"POST",body:{preset:"standard_video",title:"Crystal Robot",topic:"rain",character:"",scene_count:2,aspect_ratio:"16:9",scene_seconds:8,audio_policy:"clip_native",reference_mode:"none",review_policy:"ai_assisted",continuity_mode:"chained_frames",opening_image_required:true}});
   });
 
-  it("submits optional narration and generated-reference choices", async () => {
-    vi.mocked(apiJson).mockResolvedValueOnce({ job_id: "scene-2" });
-    const user = userEvent.setup();
-    render(<MemoryRouter initialEntries={["/scene-jobs/create"]}><Routes>
-      <Route path="/scene-jobs/create" element={<CreateSceneVideoPage />} />
-      <Route path="/scene-jobs/:jobId" element={<p>Created scene job</p>} />
-    </Routes></MemoryRouter>);
-    await user.type(screen.getByLabelText("Character"), "guide");
-    await user.type(screen.getByLabelText("Story topic"), "rain");
-    await user.selectOptions(screen.getByLabelText("Final audio"), "external_narration");
-    await user.selectOptions(screen.getByLabelText("Scenes"), "2");
-    await user.selectOptions(screen.getByLabelText("Starting reference images"), "provider_generated");
-    await user.click(screen.getByRole("button", { name: "Create scene-video job" }));
+  it("supports real advanced continuity and reference overrides", async () => {
+    vi.mocked(apiJson).mockImplementation(async path => path === "/scene-video-options" ? {standard_available:true,scene_seconds:8,initial_keyframe_enabled:true} : {job_id:"scene-2"});
+    const user=userEvent.setup(); const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/create"]}><Routes><Route path="/scene-jobs/create" element={<CreateSceneVideoPage/>}/><Route path="/scene-jobs/:jobId" element={<p>Created scene job</p>}/></Routes></MemoryRouter></QueryClientProvider>);
+    await user.type(screen.getByLabelText("Idea / story"),"rain");
+    await user.click(screen.getByText("Advanced settings"));
+    await user.selectOptions(screen.getByLabelText("Continuity"),"independent");
+    await user.selectOptions(screen.getByLabelText("Reference mode"),"provider_generated");
+    await user.click(await screen.findByRole("button",{name:"Generate Storyboard"}));
     expect(await screen.findByText("Created scene job")).toBeInTheDocument();
-    expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs", { method: "POST", body: { character: "guide", topic: "rain", scene_count: 2, audio_policy: "external_narration", reference_mode: "provider_generated", review_policy: "off" } });
+    expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({body:expect.objectContaining({reference_mode:"provider_generated",continuity_mode:"independent"})}));
   });
 
   it("shows the waiting handoff and scene prompt", async () => {
@@ -77,8 +71,8 @@ describe("manual Flow pages", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/scene-r2"]}><Routes><Route path="/scene-jobs/:jobId" element={<SceneVideoPage />} /></Routes></MemoryRouter></QueryClientProvider>);
     expect((await screen.findAllByText("Crystal moves off pedestal")).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: "Accept scene" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Regenerate in Flow" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accept Scene" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate" })).toBeInTheDocument();
     expect(screen.getByAltText("Scene 2 evidence frame 2")).toBeInTheDocument();
     expect(screen.getByText(/Attempt 1 clip/)).toBeInTheDocument();
   });
@@ -124,24 +118,24 @@ describe("R3 media conformance workflow", () => {
     render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/r3-job"]}><Routes><Route path="/scene-jobs/:jobId" element={<SceneVideoPage />} /></Routes></MemoryRouter></QueryClientProvider>);
   }
 
-  it("shows exact mismatch and binds Continue Anyway to the current attempt without creative acceptance", async () => {
+  it("shows exact mismatch and binds Use Anyway to the current attempt without creative acceptance", async () => {
     const user = userEvent.setup();
     vi.mocked(apiJson).mockResolvedValue(job());
     renderJob();
-    await screen.findByRole("button", { name: "Continue Anyway" });
+    await screen.findByRole("button", { name: "Use Anyway" });
     expect(screen.getByText(/It does not accept the scene/)).toBeInTheDocument();
     expect(screen.getAllByText("Expected: 9:16").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Imported: 16:9").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Expected: 4 sec").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept Scene" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry AI review" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Import generated MP4")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Continue Anyway" }));
+    await user.click(screen.getByRole("button", { name: "Use Anyway" }));
     expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs/r3-job/scenes/1/attempts/2/conformance/continue", { method: "POST" });
     expect(vi.mocked(apiJson).mock.calls.some(([path]) => path.endsWith("/accept") || path.endsWith("/review"))).toBe(false);
   });
 
-  it("Replace Clip preserves history and exposes a fresh MP4 import", async () => {
+  it("Generate Again preserves history and exposes a fresh MP4 import", async () => {
     const user = userEvent.setup();
     let data = job();
     vi.mocked(apiJson).mockImplementation(async (path) => {
@@ -152,7 +146,7 @@ describe("R3 media conformance workflow", () => {
       return data;
     });
     renderJob();
-    await user.click(await screen.findByRole("button", { name: "Replace Clip" }));
+    await user.click(await screen.findByRole("button", { name: "Generate Again" }));
     expect(await screen.findByLabelText("Import generated MP4")).toBeInTheDocument();
     expect(screen.getByText(/Attempt 2 clip/)).toBeInTheDocument();
     expect(screen.getByText(/Human media decision: Replace Clip/)).toBeInTheDocument();
@@ -170,12 +164,12 @@ describe("R3 media conformance workflow", () => {
       return data;
     });
     renderJob();
-    await user.click(await screen.findByRole("button", { name: "Continue Anyway" }));
+    await user.click(await screen.findByRole("button", { name: "Use Anyway" }));
     expect(await screen.findByRole("button", { name: "Retry AI review" })).toBeInTheDocument();
     expect(screen.getAllByText(/Media override accepted/).length).toBeGreaterThan(0);
     expect(screen.getByRole("alert")).toHaveTextContent("media override saved");
-    expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByRole("button", { name: "Continue Anyway" })).not.toBeInTheDocument());
+    expect(screen.queryByRole("button", { name: "Accept Scene" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Use Anyway" })).not.toBeInTheDocument());
   });
 
   it("renders conforming media with AI review and no override action", async () => {
@@ -184,18 +178,18 @@ describe("R3 media conformance workflow", () => {
       review: { verdict: "pass", summary: "Consistent", issues: [], checks: {}, retry_recommended: false, retry_prompt_delta: [], frames: [] } };
     vi.mocked(apiJson).mockResolvedValue({ ...data, status: "awaiting_human_decision", scenes: [{ ...data.scenes[0], status: "human_decision_required", attempts: [reviewed] }] });
     renderJob();
-    expect(await screen.findByRole("button", { name: "Accept scene" })).toBeInTheDocument();
-    expect(screen.getAllByText("Media conformance · PASS").length).toBeGreaterThan(0);
+    expect(await screen.findByRole("button", { name: "Accept Scene" })).toBeInTheDocument();
+    expect(screen.getAllByText("Video settings").length).toBeGreaterThan(0);
     expect(screen.getByText(/AI visual review/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Continue Anyway" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use Anyway" })).not.toBeInTheDocument();
   });
 
   it("shows conformance decisions for review off without offering AI acceptance", async () => {
     vi.mocked(apiJson).mockResolvedValue(job("pending", "off"));
     renderJob();
-    expect(await screen.findByRole("button", { name: "Continue Anyway" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Use Anyway" })).toBeInTheDocument();
     expect(screen.getByText("Attempt history")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept Scene" })).not.toBeInTheDocument();
   });
 });
 

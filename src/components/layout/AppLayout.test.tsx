@@ -12,14 +12,14 @@ describe("AppLayout", () => {
         <Routes>
           <Route element={<AppLayout />}>
             <Route index element={<div>Recent route</div>} />
-            <Route path="create" element={<div>Create route</div>} />
+            <Route path="videos/new" element={<div>Create route</div>} />
           </Route>
         </Routes>
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: "Recent Jobs" })).toBeInTheDocument();
-    await user.click(screen.getByRole("link", { name: "Create Video" }));
+    expect(screen.getByRole("link", { name: "Projects" })).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "New Video" }));
     expect(screen.getByText("Create route")).toBeInTheDocument();
   });
 });

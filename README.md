@@ -1,3 +1,27 @@
+# Video Studio
+
+The current scene-video app opens to **Projects**. Choose **New Video**, describe an idea, review the concise storyboard, and start sequential production. Standard Video defaults to native audio, AI-assisted review and continuity from accepted ending frames. Each scene waits for your creative decision; AI findings are advisory.
+
+Routes:
+
+- `/` or `/videos`: saved projects with titles, thumbnails, progress and next actions.
+- `/videos/new` (also `/scene-jobs/create`): simple creation; Advanced settings start collapsed.
+- `/scene-jobs/:id`: storyboard, generation, scene review, continuity and final video on one page.
+- `/create` and `/slideshow-jobs/:id`: retained slideshow tools under Advanced navigation.
+
+Run the backend's `./scripts/run-standard-video.ps1` for the accepted local Flow configuration, then `npm run dev` here. Use `VITE_API_BASE_URL=http://localhost:8080` for the local API. The creation form shows the actual configured scene length; unsupported automation is reported as unavailable.
+
+Opening or reloading a project reads persisted state. It does not authorize generation, acceptance, media overrides or review retries. Manual Flow import, prompts and full histories remain under **Advanced / Diagnostics**. Final videos retain playback, scene markers and a friendly **Download Video** filename using the original artifact.
+
+Validation: `npm run typecheck`, `npm run lint`, `npm run test:run`, `npm run build`, and `git diff --check`. Unit tests use mocked APIs, with no real Flow or Zen calls. Vitest uses four workers to bound local jsdom resource pressure.
+
+R8 is uncommitted and awaiting completion of the fresh real acceptance. See the backend's `docs/scene-video-revival-r8.md` for checkpoint, audit and live evidence.
+
+---
+
+## Historical slideshow v1 scope
+
+The following documents the original slideshow scope and implementation history. Its placeholder landing-page and slideshow-only statements predate the current scene-video product.
 # Ai Video Pipeline Frontend
 
 This repository is the planned frontend for the Ai Video Pipeline slideshow video product path. It started as a docs-first frontend repository so the product scope, UX, API contracts, architecture, and test strategy were clear before React application code was scaffolded.
@@ -99,3 +123,17 @@ Real image and TTS quality depends on later backend provider integration. The fi
 - [V1 Non-Goals](docs/v1-non-goals.md)
 - [Implementation Sequence](docs/implementation-sequence.md)
 - [Testing Plan](docs/testing-plan.md)
+
+
+## R8.2 opening image review (uncommitted)
+
+Standard Video reads the backend's opt-in opening-keyframe setting. The first
+scene shows Preparing opening image, then the saved image and expected entry
+state with Generate Another / Use This Image. An unsuitable aspect blocks
+approval. Upload Opening Image is a manual fallback through the same gate.
+Provider selection and old run history stay in Advanced / Diagnostics.
+Reloading resumes the stored review without submitting again. Approval does
+not accept the video or start it; the separate video action uses the approved
+PNG, and scene review compares Approved opening against Generated opening.
+Later scenes keep the accepted R7 ending-frame handoff. The original R8 fresh
+two-scene creative acceptance is still required before this milestone is accepted.

@@ -31,7 +31,7 @@ describe("R4 review execution", () => {
     const view = renderJob();
     expect(await screen.findByText(status === "queued" ? "Queued…" : "Reviewing scene…")).toBeInTheDocument();
     expect(screen.getByText(/You can leave or reload/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept Scene" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Retry AI review" })).not.toBeInTheDocument();
     view.unmount(); view.client.clear();
   });
@@ -45,7 +45,7 @@ describe("R4 review execution", () => {
     const second = renderJob();
     await screen.findByText("Reviewing scene…");
     data = job("completed");
-    expect(await screen.findByRole("button", { name: "Accept scene" }, { timeout: 4000 })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Accept Scene" }, { timeout: 4000 })).toBeInTheDocument();
     expect(screen.getAllByText("Creative mismatch").length).toBeGreaterThan(0);
     expect(vi.mocked(apiJson).mock.calls.every(([path, options]) => path === "/scene-video-jobs/r4-job" && !options)).toBe(true);
     second.unmount(); second.client.clear();
@@ -64,9 +64,9 @@ describe("R4 review execution", () => {
       return data;
     });
     const view = renderJob(); const user = userEvent.setup();
-    expect(await screen.findByText("Review failed")).toBeInTheDocument();
+    expect(await screen.findByText("AI review failed")).toBeInTheDocument();
     expect(screen.getByText(/clip and media checks are unchanged/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Accept scene" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept Scene" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Retry AI review" }));
     expect(await screen.findByRole("button", { name: "Queueing AI review…" })).toBeDisabled();
     expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs/r4-job/scenes/1/attempts/2/review/retry", { method: "POST" });
@@ -87,7 +87,7 @@ describe("R4 review execution", () => {
     const data = job("completed"); data.scenes[0].attempts[0].review_runs = [];
     vi.mocked(apiJson).mockResolvedValue(data);
     const view = renderJob();
-    expect(await screen.findByRole("button", { name: "Accept scene" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Accept Scene" })).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByRole("button", { name: "Retry AI review" })).not.toBeInTheDocument());
     view.unmount(); view.client.clear();
   });
@@ -97,8 +97,8 @@ describe("R4 review execution", () => {
     Object.assign(data.scenes[0].attempts[0].review!, { verdict: "pass", issues: null, retry_prompt_delta: null, frames: null });
     vi.mocked(apiJson).mockResolvedValue(data);
     const view = renderJob();
-    expect(await screen.findByRole("button", { name: "Accept scene" })).toBeInTheDocument();
-    expect(screen.getByText("PASS")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Accept Scene" })).toBeInTheDocument();
+    expect(screen.getByText("Looks consistent")).toBeInTheDocument();
     view.unmount(); view.client.clear();
   });
 });

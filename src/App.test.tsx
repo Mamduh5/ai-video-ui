@@ -7,13 +7,13 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: /explainer slideshow studio/i }),
+      screen.getByRole("heading", { name: /video studio/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /recent jobs/i }),
+      screen.getByRole("link", { name: /projects/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /create video/i }),
+      screen.getByRole("link", { name: /^new video$/i }),
     ).toBeInTheDocument();
   });
 });
