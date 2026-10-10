@@ -35,6 +35,7 @@ export function AppLayout() {
             <NavLink className={navLinkClass} to="/videos/new">
               New Video
             </NavLink>
+            <NavLink className={navLinkClass} to="/gemini-autopilot">Gemini Autopilot</NavLink>
             <details className="rounded px-3 py-2 text-sm"><summary className="cursor-pointer">Advanced</summary><NavLink className={navLinkClass} to="/create">Slideshow tools</NavLink></details>
           </nav>
         </div>

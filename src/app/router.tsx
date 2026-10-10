@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppLayout } from "../components/layout/AppLayout";
 import { CreateJobPage } from "../pages/CreateJobPage";
 import { JobDetailPage } from "../pages/JobDetailPage";
+import { GeminiAutopilotPage } from "../pages/GeminiAutopilotPage";
 import { ProjectsPage } from "../pages/ProjectsPage";
 import { CreateSceneVideoPage, SceneVideoPage } from "../pages/SceneVideoPage";
 
@@ -12,6 +13,7 @@ export function AppRouter() {
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<ProjectsPage />} />
+          <Route path="gemini-autopilot" element={<GeminiAutopilotPage />} />
           <Route path="videos" element={<ProjectsPage />} />
           <Route path="videos/new" element={<CreateSceneVideoPage />} />
           <Route path="create" element={<CreateJobPage />} />

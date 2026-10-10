@@ -29,3 +29,15 @@ it('uses backend opening-image next action and keeps diagnostics collapsed',asyn
 
 it('preserves the whole portrait preview on project cards',async()=>{vi.mocked(apiJson).mockResolvedValue({projects:[{...project,aspect_ratio:'9:16'}],has_more:false});const view=show('/');expect(await screen.findByAltText('Crystal Robot preview')).toHaveClass('object-contain');view.cleanup();});
 it('keeps eight planned scenes compact with an eighty-second estimate and generation awareness',async()=>{vi.mocked(apiJson).mockResolvedValue({...reviewed,scene_count:8,scene_seconds:10,production:undefined,next_action:{type:'start_production',label:'Start Production',message:'Review the storyboard.',background:false},scenes:Array.from({length:8},(_,index)=>({order:index+1,status:'waiting',generation_request:{...request,duration_seconds:10,story_beat:`Beat ${index+1}`}}))});const view=show();const storyboard=await screen.findByLabelText('Storyboard');expect(storyboard).toHaveTextContent('~80 sec');expect(storyboard).toHaveTextContent('8 initial Flow video generations');expect(within(storyboard).getAllByText('Scene details')).toHaveLength(8);for(const details of within(storyboard).getAllByText('Scene details'))expect(details.closest('details')).not.toHaveAttribute('open');expect(screen.getByRole('button',{name:'Start Production'})).toBeVisible();expect(vi.mocked(apiJson).mock.calls.every(([,options])=>!options)).toBe(true);view.cleanup();});
+
+it('distinguishes completed autopilot production from existing Flow approval',async()=>{
+ vi.mocked(apiJson).mockResolvedValue({projects:[{...project,id:'gemini',title:'Automatic Robot',provider:'gemini_web',acceptance_type:'autopilot',accepted_count:2,display_status:'Completed by Gemini Autopilot',next_action:{type:'watch_final_video',label:'Watch Final Video',message:'',background:false}},project],has_more:false});
+ const view=show('/');
+ const title=await screen.findByRole('heading',{name:'Automatic Robot'});
+ const card=title.closest('article')!;
+ expect(within(card).getByText(/2 \/ 2 scenes produced/)).toBeInTheDocument();
+ expect(within(card).getByText(/creative quality not human reviewed/)).toBeInTheDocument();
+ expect(within(card).getByRole('link',{name:'Watch Final Video'})).toHaveAttribute('href','/scene-jobs/gemini');
+ expect(screen.getByText(/0 \/ 2 scenes approved/)).toBeInTheDocument();
+ view.cleanup();
+});
