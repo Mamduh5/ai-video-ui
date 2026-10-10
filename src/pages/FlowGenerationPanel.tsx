@@ -41,6 +41,7 @@ export function FlowGenerationPanel({ jobId, order, runs, hasClip, regenerationI
     <h4 className="font-semibold">Scene generation</h4>
     <p role="status">{current ? (current.status === "completed" && !hasClip ? "Ready for deliberate regeneration" : labels[current.status] ?? current.status.replaceAll("_", " ")) : `Status: ${readiness.data?.status.replaceAll("_", " ") ?? "Ready when you are"}`}</p>
     {(current?.failure || readiness.data?.reason) && <details><summary>Technical reason</summary><p className="text-sm">{(current?.failure || readiness.data?.reason)?.replaceAll("_", " ")}</p></details>}
+    {needsAttention && current.failure?.includes("selected Flow") && <p role="alert">{current.failure}</p>}
     {needsAttention && <a className="inline-block rounded border px-4 py-2 text-blue-800" href="https://flow.google.com/" target="_blank" rel="noreferrer">Open Flow to Check</a>}
     {needsAttention && <p className="text-sm">Open Flow and check your session. {current.submission_intent ? "Submission may have consumed credits. We will check for the existing result to avoid spending credits twice." : "Try Again will retry preparation before submission."} Manual MP4 import remains available below.</p>}
     {!hasClip && !active && (!needsAttention || !current.submission_intent) && regenerationInstructions !== undefined && <div className="space-y-2">
