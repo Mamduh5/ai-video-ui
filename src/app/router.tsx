@@ -5,6 +5,7 @@ import { CreateJobPage } from "../pages/CreateJobPage";
 import { JobDetailPage } from "../pages/JobDetailPage";
 import { GeminiAutopilotPage } from "../pages/GeminiAutopilotPage";
 import { ProjectsPage } from "../pages/ProjectsPage";
+import { StoragePage } from "../pages/StoragePage";
 import { CreateSceneVideoPage, SceneVideoPage } from "../pages/SceneVideoPage";
 
 export function AppRouter() {
@@ -14,6 +15,7 @@ export function AppRouter() {
         <Route element={<AppLayout />}>
           <Route index element={<ProjectsPage />} />
           <Route path="gemini-autopilot" element={<GeminiAutopilotPage />} />
+          <Route path="storage" element={<StoragePage />} />
           <Route path="videos" element={<ProjectsPage />} />
           <Route path="videos/new" element={<CreateSceneVideoPage />} />
           <Route path="create" element={<CreateJobPage />} />

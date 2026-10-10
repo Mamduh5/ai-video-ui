@@ -1,3 +1,4 @@
+import { StorageWarning } from "../../pages/StoragePage";
 import { useLayoutEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
@@ -36,11 +37,13 @@ export function AppLayout() {
               New Video
             </NavLink>
             <NavLink className={navLinkClass} to="/gemini-autopilot">Gemini Autopilot</NavLink>
+            <NavLink className={navLinkClass} to="/storage">Storage</NavLink>
             <details className="rounded px-3 py-2 text-sm"><summary className="cursor-pointer">Advanced</summary><NavLink className={navLinkClass} to="/create">Slideshow tools</NavLink></details>
           </nav>
         </div>
       </header>
       <main className="mx-auto max-w-7xl px-6 py-6">
+        <StorageWarning/>
         <Outlet />
       </main>
     </div>
