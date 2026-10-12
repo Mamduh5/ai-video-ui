@@ -15,5 +15,6 @@ describe("App", () => {
     expect(
       screen.getByRole("link", { name: /^new video$/i }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", {name:/^settings$/i})).toHaveAttribute("href","/settings");
   });
 });
