@@ -1,6 +1,6 @@
-export type VideoDefaults = { scene_count: number; scene_seconds: number; aspect_ratio: string; audio_policy: string };
+export type VideoDefaults = { max_scenes?: number; scene_count: number; scene_seconds: number; aspect_ratio: string; audio_policy: string };
 export type VideoSettings = { version: number; preferred_workflow: string; flow: VideoDefaults; gemini: VideoDefaults };
-export type CreationOptions = { standard_available: boolean; gemini_available?: boolean; scene_seconds: number; initial_keyframe_enabled?: boolean; video_defaults?: VideoSettings; capabilities?: { aspect_ratios: string[]; scene_durations: number[]; min_scene_count: number; max_scene_count: number } };
+export type CreationOptions = { hard_scene_limit?: number; gemini_submission_cap?: number; gemini_capabilities?: {max_scenes:number; native_seconds:number; aspect_ratios:string[]}; standard_available: boolean; gemini_available?: boolean; scene_seconds: number; initial_keyframe_enabled?: boolean; video_defaults?: VideoSettings; capabilities?: { aspect_ratios: string[]; scene_durations: number[]; min_scene_count: number; max_scene_count: number } };
 export type StorageSettings = { version?: number; automatic: boolean; level: string; cleanup: string; warning_bytes: number; critical_bytes: number; reserve_bytes: number };
 export const field = "mt-1 block w-full rounded-lg border border-slate-300 p-3";
 export const archiveLevels = { final_only: "Final Only", restorable: "Restorable", full_history: "Full History" };
@@ -27,3 +27,10 @@ export function validateStorage(s: StorageSettings): string {
  if (!(s.level in archiveLevels) || !(s.cleanup in retentionPolicies)) return "Choose a supported archive level and retention policy.";
  return "";
 }
+
+export function runningTime(seconds: number): string { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`; }
+export type QuotaTiming = { provider_reset_at?: string; provider_date_explicit?: boolean; manual_reset_at?: string; manual_recorded_at?: string; application_fallback_at?: string; provider_fallback_at?: string; effective_at?: string; source: string; manual_status: string; remaining_blockers: string[] };
+export type QuotaConfig = { version: number; observed_reset_at?: string | null };
+export function quotaSourceLabel(source?: string) {return ({provider_reported:"Provider-reported dated reset",provider_clock_inferred:"Provider clock (date inferred; waiting evidence only)",user_observed:"User-observed reset (not provider-verified)",application_fallback:"Application fallback estimate",fallback_estimate:"Fallback estimate",none:"No scheduled wait"} as Record<string,string>)[source??"none"]??"Estimated timing";}
+export function bangkokResetInput(utc?: string | null): string { if (!utc) return ""; return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(utc)).replace(" ", "T"); }
+export function bangkokResetUTC(value: string): string | null {if (!value) return null;if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error("Enter a complete date and time in Bangkok.");const date=new Date(`${value}:00+07:00`);if (!Number.isFinite(date.getTime()) || bangkokResetInput(date.toISOString())!==value) throw new Error("Enter a valid Bangkok date and time.");return date.toISOString();}
