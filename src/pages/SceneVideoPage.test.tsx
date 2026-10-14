@@ -12,6 +12,13 @@ vi.mock("../lib/apiClient", async (importOriginal) => ({
 }));
 
 describe("manual Flow pages", () => {
+  it("labels an owner recovery without claiming unattended acceptance of that clip",async()=>{
+    vi.mocked(apiJson).mockResolvedValue({id:"existing",title:"Recovered project",status:"awaiting_external_generation",current_step:"awaiting_external_generation",autopilot:{provider:"gemini_web",review_status:"not_reviewed"},display_status:"Recovering owner-submitted video",accepted_count:2,scene_count:3,scenes:[{order:3,status:"accepted",generation_request:{story_beat:"Final scene"},attempts:[{attempt:1,imported_at:"2026-10-15T00:00:00Z",external_recovery:{id:"external:owner",original_run_id:"failed",source:"owner_manual_resend"}}]}]});
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/existing"]}><Routes><Route path="/scene-jobs/:jobId" element={<SceneVideoPage/>}/></Routes></MemoryRouter></QueryClientProvider>);
+    expect(await screen.findByText(/Includes owner-submitted recovery accepted after R3 validation/)).toBeInTheDocument();
+    expect(screen.queryByText(/Accepted by Gemini Autopilot after R3 validation/)).not.toBeInTheDocument();
+  });
   it("lets an authored supervised project import its waiting storyboard", async () => {
     vi.mocked(apiJson).mockResolvedValue({id:"authored",status:"pending",current_step:"pending",planner_provenance:{provider:"operator_authored",method:"waiting for import"},next_action:{type:"planning",label:"Planning",message:"Waiting for storyboard"}});
     const user=userEvent.setup();
