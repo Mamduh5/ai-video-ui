@@ -9,6 +9,13 @@ afterEach(()=>{cleanup();vi.clearAllMocks()});
 const base:AutopilotData={server_now:"2026-10-10T08:00:00Z",available:true,runtime_notice:"Autopilot runs while this PC is awake and the backend is running. Creative quality has not been human reviewed.",capabilities:{aspect_ratios:["16:9"],native_seconds:10,max_scenes:8},scheduler:{enabled:true,configured_submission_cap:4,submissions_this_window:0,queue:[]}};
 function mount(data=base){vi.mocked(apiJson).mockResolvedValue(data);render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><MemoryRouter><GeminiAutopilotPage/></MemoryRouter></QueryClientProvider>)}
 describe("Gemini Autopilot",()=>{
+ it("shows provider waiting as a read-only check rather than another video attempt",async()=>{
+  mount({...base,scheduler:{...base.scheduler,submissions_this_window:2,queue:[{job_id:"existing",title:"Existing project",status:"waiting_provider",scene_count:3,accepted_count:2,started:true,paused:false,scene_seconds:10,runs:[],diagnostic:{code:"video_tool_disabled",stage:"availability",source:"Gemini",message:"Create Video is disabled. No request sent.",retryable:true,next_retry_at:"2026-10-14T16:00:00Z"}}]}});
+  expect(await screen.findByText("Waiting for Gemini video availability")).toBeInTheDocument();
+  expect(screen.getByText(/Next read-only availability check:/)).toHaveTextContent("14/10/2026, 23:00:00 Bangkok");
+  expect(screen.queryByText(/Automatic retry:/)).not.toBeInTheDocument();
+  expect(screen.getByText(/2 \/ 4 submissions/)).toBeInTheDocument();
+ });
  it("shows truthful planning failure and Bangkok automatic retry",async()=>{
   mount({...base,scheduler:{...base.scheduler,queue:[{job_id:"same",title:"Original video",status:"planning_retry",scene_count:4,accepted_count:0,started:false,paused:false,scene_seconds:10,runs:[],failure:"planner_timeout",diagnostic:{code:"planner_timeout",stage:"planning",source:"OpenCode Zen",message:"Storyboard planning timed out at OpenCode Zen. No Gemini video was submitted.",retryable:true,next_retry_at:"2026-10-11T01:30:00Z",diagnostic_reference:"original-run"}}]}});
   expect(await screen.findByText(/Storyboard planning timed out at OpenCode Zen/,{selector:"p"})).toBeInTheDocument();

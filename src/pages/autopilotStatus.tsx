@@ -14,7 +14,7 @@ export type FailureDetail = {
 export function AutopilotFailure({ detail }: { detail: FailureDetail }) {
   return <div className="space-y-1 text-amber-800" role="status">
     <p>{detail.message}</p>
-    {detail.next_retry_at && <p>Automatic retry: <time dateTime={detail.next_retry_at}>{bangkokTime(detail.next_retry_at)}</time></p>}
+    {detail.next_retry_at && <p>{detail.stage === "availability" || detail.code === "video_tool_disabled" ? "Next read-only availability check:" : "Automatic retry:"} <time dateTime={detail.next_retry_at}>{bangkokTime(detail.next_retry_at)}</time></p>}
     {!detail.next_retry_at && !detail.retryable && <p>See Diagnostics for the affected {detail.stage} stage.</p>}
     {detail.diagnostic_reference && <p className="text-xs">Diagnostic reference: {detail.diagnostic_reference}</p>}
   </div>;
