@@ -12,6 +12,18 @@ vi.mock("../lib/apiClient", async (importOriginal) => ({
 }));
 
 describe("manual Flow pages", () => {
+  it("lets an authored supervised project import its waiting storyboard", async () => {
+    vi.mocked(apiJson).mockResolvedValue({id:"authored",status:"pending",current_step:"pending",planner_provenance:{provider:"operator_authored",method:"waiting for import"},next_action:{type:"planning",label:"Planning",message:"Waiting for storyboard"}});
+    const user=userEvent.setup();
+    const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+    render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/authored"]}><Routes><Route path="/scene-jobs/:jobId" element={<SceneVideoPage/>}/></Routes></MemoryRouter></QueryClientProvider>);
+    const input=await screen.findByLabelText("Storyboard JSON");
+    await user.click(input);
+    await user.paste('{"story_summary":"Original authored plan","scenes":[]}');
+    await user.click(screen.getByRole("button",{name:"Import storyboard"}));
+    await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs/authored/storyboard/import",{method:"POST",body:{story_summary:"Original authored plan",scenes:[]}}));
+    expect(apiJson).not.toHaveBeenCalledWith("/flow-autopilot/queue",expect.anything());
+  });
   it("creates a Standard Video without opening Advanced", async () => {
     vi.mocked(apiJson).mockImplementation(async path => path === "/scene-video-options" ? {standard_available:true,scene_seconds:8,initial_keyframe_enabled:true} : {job_id:"scene-1"});
     const user=userEvent.setup(); const client=new QueryClient({defaultOptions:{queries:{retry:false}}});

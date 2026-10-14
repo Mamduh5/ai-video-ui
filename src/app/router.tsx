@@ -4,6 +4,7 @@ import { AppLayout } from "../components/layout/AppLayout";
 import { CreateJobPage } from "../pages/CreateJobPage";
 import { JobDetailPage } from "../pages/JobDetailPage";
 import { GeminiAutopilotPage } from "../pages/GeminiAutopilotPage";
+import { FlowAutopilotPage } from "../pages/FlowAutopilotPage";
 import { ProjectsPage } from "../pages/ProjectsPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { StoragePage } from "../pages/StoragePage";
@@ -16,6 +17,7 @@ export function AppRouter() {
         <Route element={<AppLayout />}>
           <Route index element={<ProjectsPage />} />
           <Route path="gemini-autopilot" element={<GeminiAutopilotPage />} />
+          <Route path="flow-autopilot" element={<FlowAutopilotPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="storage" element={<StoragePage />} />
           <Route path="videos" element={<ProjectsPage />} />
