@@ -137,3 +137,29 @@ not accept the video or start it; the separate video action uses the approved
 PNG, and scene review compares Approved opening against Generated opening.
 Later scenes keep the accepted R7 ending-frame handoff. The original R8 fresh
 two-scene creative acceptance is still required before this milestone is accepted.
+# R13 Colab storyboard planning
+
+New Video supports an opt-in Colab Qwen planner for supervised Flow. The project
+page provides a complete notebook kit, manual request/result/receipt transfer,
+saved scene prompt revisions and Human only review. Colab storyboard regeneration
+before production keeps the same project ID and advances its planning revision.
+The configured planner remains the default; Gemini Autopilot retains its own lane.
+
+Set `COLAB_EXCHANGE_DIR` on the backend to the actual absolute Drive for Desktop
+`AI_Video_Planner` folder for automatic exchange, or leave it empty and use the
+manual controls. Upload the kit's complete `notebook` folder into that Drive folder,
+open its notebook in Colab and run steps 1-4. Save any scene edits and inspect the
+effective prompt before starting production. Each Flow clip still requires explicit
+human acceptance and chained-frame confirmation. Stop the model and disconnect
+the Colab runtime when the queue pass finishes.
+
+R13 was owner-approved, accepted and closed on 2026-10-14. Real A100 Qwen
+storyboard planning, manual transfer/import, scene prompt controls and restart
+persistence passed through the running backend and rendered UI. Automated tests
+use mocked inference and isolated data; real Drive Desktop synchronization and
+fresh-VM cache restoration remain unverified. This was planning-only acceptance;
+no Flow/Gemini video generation was submitted.
+
+The operator guide and acceptance records are in the sibling backend repository
+at `docs/r13-colab-qwen-planner.md` and `docs/acceptance/r13/`. Separate local
+backend/frontend commits close R13. No push or R14 implementation is included.
