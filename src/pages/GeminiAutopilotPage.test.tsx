@@ -12,6 +12,23 @@ const observation={id:"fresh-check",at:base.server_now,status:"connected",video_
 const held:AutopilotData={...base,accounting_review:{can_release:false,reason:"A new allowance window has not been observed yet."},scheduler:{...base.scheduler,enabled:false,recovery_only:true,provider_block_reason:"external_submission_accounting",submissions_this_window:3,window_started_at:"2026-10-14T12:23:00Z",provider_observation:observation,queue:[item]}};
 function mount(data=base){vi.mocked(apiJson).mockResolvedValue(data);const client=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={client}><MemoryRouter><GeminiAutopilotPage/></MemoryRouter></QueryClientProvider>);return client}
 describe("Gemini Studio",()=>{
+ it("offers Resume after a fresh check clears a page error without redoing accounting or starting production",async()=>{
+  const failed={...base,scheduler:{...base.scheduler,provider_block_reason:"ui_unavailable",provider_observation:observation,queue:[{...item,diagnostic:{code:"ui_unavailable",stage:"readiness",source:"Gemini",message:"The Gemini interface could not be matched safely."}}]}};
+  mount(failed);await screen.findByText("Connected");let checked=false;
+  vi.mocked(apiJson).mockImplementation(async(path,options)=>{
+   if(path==="/gemini-autopilot/check"){checked=true;return {status:"checked"};}
+   if(options?.method==="POST")return {status:"saved"};
+   return checked?{...failed,scheduler:{...failed.scheduler,enabled:false,provider_block_reason:undefined}}:failed;
+  });
+  fireEvent.click(screen.getByRole("button",{name:"Check Gemini & Resume"}));
+  const panel=await screen.findByRole("region",{name:"Gemini recovery review"});
+  expect(await within(panel).findByRole("button",{name:"Resume Autopilot"})).toBeEnabled();
+  expect(screen.queryByText("One-time recovery confirmation")).not.toBeInTheDocument();
+  expect(screen.getByText("Gemini check complete. Review the result below; generation has not started.")).toBeVisible();
+  expect(within(screen.getByLabelText("Video queue")).queryByText("The Gemini interface could not be matched safely.")).not.toBeInTheDocument();
+  expect(within(screen.getByText("Advanced Diagnostics").closest("details")!).getByText("The Gemini interface could not be matched safely.")).toBeInTheDocument();
+  expect(vi.mocked(apiJson).mock.calls.some(([path])=>String(path).includes("/control/resume")||String(path).includes("/accounting/release"))).toBe(false);
+ });
  it("explains the owner's short note and unchecked confirmation instead of silently disabling recovery",async()=>{
   mount({...held,accounting_review:{can_release:false,can_confirm_observed_reset:true,reason:"Owner review available."}});
   fireEvent.click(await screen.findByRole("button",{name:"Check Gemini & Resume"}));
