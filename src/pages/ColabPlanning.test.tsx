@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { apiJson } from "../lib/apiClient";
@@ -38,4 +38,18 @@ it('does not claim a configured folder has synchronized or imported a result',as
  render(<ColabPlanningPanel id="job" planning={{status:'waiting',request:{request_id:'request-uuid',revision:3}}} onChanged={vi.fn()}/>);
  expect(await screen.findByText(/Verify Drive for Desktop synchronization separately/)).toBeVisible();
  expect(screen.queryByRole('button',{name:'Start Production'})).not.toBeInTheDocument();
+});
+
+it('transfers original Thai request and result text without rebuilding the envelope',async()=>{
+ const original='{"schema":"colab_exchange.v1","payload":"พ่อ ขายมันเถอะ ผมต้องใช้เงิน","sha256":"original-checksum"}';
+ const fetchMock=vi.fn().mockResolvedValueOnce({ok:true,text:async()=>original}).mockResolvedValueOnce({ok:true,json:async()=>({status:'imported'})});
+ vi.stubGlobal('fetch',fetchMock);
+ const changed=vi.fn();
+ render(<ColabPlanningPanel id="job" planning={{status:'waiting',request:{request_id:'req',revision:1}}} onChanged={changed}/>);
+ await userEvent.click(screen.getByRole('button',{name:'Show request JSON for clipboard transfer'}));
+ expect(await screen.findByLabelText('Exported Colab request JSON')).toHaveValue(original);
+ fireEvent.change(screen.getByLabelText('Paste completed Colab result JSON'),{target:{value:original}});
+ await userEvent.click(screen.getByRole('button',{name:'Import storyboard'}));
+ await waitFor(()=>expect(changed).toHaveBeenCalledTimes(1));
+ expect(fetchMock.mock.calls[1][1]).toEqual({method:'POST',headers:{'Content-Type':'application/json'},body:original});
 });
