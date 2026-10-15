@@ -12,6 +12,45 @@ const observation={id:"fresh-check",at:base.server_now,status:"connected",video_
 const held:AutopilotData={...base,accounting_review:{can_release:false,reason:"A new allowance window has not been observed yet."},scheduler:{...base.scheduler,enabled:false,recovery_only:true,provider_block_reason:"external_submission_accounting",submissions_this_window:3,window_started_at:"2026-10-14T12:23:00Z",provider_observation:observation,queue:[item]}};
 function mount(data=base){vi.mocked(apiJson).mockResolvedValue(data);const client=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={client}><MemoryRouter><GeminiAutopilotPage/></MemoryRouter></QueryClientProvider>);return client}
 describe("Gemini Studio",()=>{
+ it("requires renewed confirmation when the provider reading changes",async()=>{
+  const ready={...held,accounting_review:{can_release:true,reason:"Fresh rollover observed."}};
+  const client=mount(ready);
+  fireEvent.click(await screen.findByRole("button",{name:"Check Gemini & Resume"}));
+  const close=await screen.findByRole("button",{name:"Close old window"});
+  fireEvent.click(screen.getByRole("checkbox"));expect(close).toBeEnabled();
+  client.setQueryData(["geminiAutopilot"],{...ready,scheduler:{...ready.scheduler,provider_observation:{...observation,id:"new-reading"}}});
+  await waitFor(()=>expect(close).toBeDisabled());expect(screen.getByRole("checkbox")).not.toBeChecked();
+ });
+ it("brings the required confirmation into focus and continues the same review instead of checking repeatedly",async()=>{
+  mount(held);
+  fireEvent.click(await screen.findByRole("button",{name:"Check Gemini & Resume"}));
+  const review=await screen.findByRole("region",{name:"Gemini recovery review"});
+  await waitFor(()=>expect(review).toHaveFocus());
+  expect(within(review).getByText(/Step 2 of 3/)).toBeVisible();
+  expect(review.compareDocumentPosition(screen.getByLabelText("Autopilot status"))&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  fireEvent.click(screen.getByRole("button",{name:"Continue recovery"}));
+  expect(vi.mocked(apiJson).mock.calls.filter(([path])=>path==="/gemini-autopilot/check")).toHaveLength(1);
+  expect(vi.mocked(apiJson).mock.calls.some(([path])=>String(path).includes("/control/resume"))).toBe(false);
+ });
+ it("keeps the final Resume action in the same visible panel after recovery confirmation",async()=>{
+  const ready={...held,accounting_review:{can_release:true,reason:"Fresh rollover observed."}};
+  mount(ready);await screen.findByText("Connected");
+  let released=false;
+  vi.mocked(apiJson).mockImplementation(async(path,options)=>{
+   if(path==="/gemini-autopilot/accounting/release"){released=true;return {status:"reviewed"};}
+   if(options?.method==="POST")return {status:"saved"};
+   return released?{...base,scheduler:{...base.scheduler,enabled:false,provider_observation:observation}}:ready;
+  });
+  fireEvent.click(screen.getByRole("button",{name:"Check Gemini & Resume"}));
+  const close=await screen.findByRole("button",{name:"Close old window"});
+  fireEvent.click(screen.getByRole("checkbox"));fireEvent.click(close);
+  const panel=screen.getByRole("region",{name:"Gemini recovery review"});
+  const resume=await within(panel).findByRole("button",{name:"Resume Autopilot"});
+  expect(within(panel).getByText(/Step 3 of 3/)).toBeVisible();expect(panel).toHaveFocus();
+  expect(vi.mocked(apiJson).mock.calls.some(([path])=>String(path).includes("/control/resume"))).toBe(false);
+  fireEvent.click(resume);
+  await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/control/resume",{method:"POST",body:undefined}));
+ });
  it("requires a separate owner observation when only a fresh zero usage reading exists",async()=>{mount({...held,accounting_review:{can_release:false,can_confirm_observed_reset:true,reason:"No rollover observed automatically."}});fireEvent.click(await screen.findByRole("button",{name:"Check Gemini & Resume"}));const close=await screen.findByRole("button",{name:"Close old window"});fireEvent.click(screen.getByRole("checkbox"));expect(close).toBeDisabled();fireEvent.change(screen.getByLabelText("What did you observe when Gemini usage reset?"),{target:{value:"I saw Gemini usage reset after the earlier submissions."}});expect(close).toBeEnabled();fireEvent.click(close);await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/accounting/release",{method:"POST",body:{observation_id:"fresh-check",owner_confirmed:true,owner_reset_observed:true,owner_reset_note:"I saw Gemini usage reset after the earlier submissions."}}));});
  it("prioritizes browser, planning, video state and the existing queued project",async()=>{mount(held);expect(await screen.findByText("Connected")).toBeInTheDocument();expect(screen.getByText("Can prepare ideas")).toBeInTheDocument();expect(screen.getByText("Review needed")).toBeInTheDocument();expect(screen.getByRole("link",{name:/The Loading Bar Fights Back/})).toHaveAttribute("href","/scene-jobs/existing");expect(screen.getByRole("button",{name:"Check Gemini & Resume"})).toBeEnabled();expect(screen.queryByRole("button",{name:"Resume Autopilot"})).not.toBeInTheDocument()});
  it("checks without resuming or releasing when evidence is insufficient",async()=>{mount(held);fireEvent.click(await screen.findByRole("button",{name:"Check Gemini & Resume"}));expect(await screen.findByText(held.accounting_review!.reason)).toBeVisible();expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/check",{method:"POST",body:undefined});expect(screen.queryByRole("button",{name:"Close old window"})).not.toBeInTheDocument();expect(vi.mocked(apiJson).mock.calls.some(([path])=>String(path).includes("/control/resume"))).toBe(false)});
