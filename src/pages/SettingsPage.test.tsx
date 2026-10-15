@@ -23,7 +23,7 @@ it("loads all sections, persisted 5/2/1 GiB and calculated floor without mutatio
  expect(await screen.findByRole("form", { name: "General / Video Defaults" })).toBeVisible();
  expect(screen.getByRole("form", { name: "Gemini Autopilot" })).toBeVisible(); expect(screen.getByRole("form", { name: "Storage & Google Drive" })).toBeVisible();
  expect(screen.getByLabelText("Warning free space (GiB)")).toHaveValue("5"); expect(screen.getByLabelText("Critical free space (GiB)")).toHaveValue("2"); expect(screen.getByLabelText("Working space reserve (GiB)")).toHaveValue("1"); expect(screen.getByText("3 GiB free")).toBeVisible();
- expect(screen.getByText(/4 submissions counted \/ 4 application cap/)).toBeVisible(); expect(screen.getByText(/estimated; provider reset not confirmed/)).toBeVisible(); expect(screen.getByText(/requires restart to change/)).toBeVisible();
+ fireEvent.click(screen.getByText("Advanced Diagnostics & manual reset observations")); expect(screen.getByText(/4 submissions counted \/ 4 application cap/)).toBeVisible(); expect(screen.getByText(/estimated; provider reset not confirmed/)).toBeVisible(); expect(screen.getByText(/requires restart to change/)).toBeVisible();
  expect(vi.mocked(apiJson).mock.calls.every(([path, init]) => !init?.method && !path.includes("readiness"))).toBe(true);
 });
 it("shows loading and readable fetch failures", async () => { vi.mocked(apiJson).mockRejectedValue(new Error("Settings database unavailable")); show(<SettingsPage />); expect(screen.getByText("Loading video defaults...")).toBeVisible(); await waitFor(() => expect(screen.getAllByRole("alert").length).toBeGreaterThan(0)); });

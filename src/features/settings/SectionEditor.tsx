@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from "react";
 import { primary } from "../../pages/videoProduct";
 
-export function SectionEditor<T>({ title, saved, validate, onSave, onReload, children, saveLabel = "Save Changes" }: {
+export function SectionEditor<T>({ title, saved, validate, onSave, onReload, children, saveLabel = "Save Changes", successMessage = "Changes saved." }: {
  title: string; saved: T; validate: (value: T) => string; onSave: (value: T) => Promise<void>; onReload: () => Promise<unknown>;
- children: (value: T, edit: (value: T) => void) => ReactNode; saveLabel?: string;
+ children: (value: T, edit: (value: T) => void) => ReactNode; saveLabel?: string; successMessage?: string;
 }) {
  const [draft, setDraft] = useState<T>(), [base, setBase] = useState<string>(), [busy, setBusy] = useState(false), [error, setError] = useState(""), [success, setSuccess] = useState(false);
  const value = draft ?? saved;
@@ -24,7 +24,7 @@ export function SectionEditor<T>({ title, saved, validate, onSave, onReload, chi
   {validation && <p role="alert" className="break-words text-red-700">{validation}</p>}
   {changed && <p role="alert">Saved values changed elsewhere. Your draft is retained. Reload saved values and review your edits before saving.</p>}
   {error && <p role="alert" className="break-words text-red-700">{error}</p>}
-  {success && <p role="status">Changes saved.</p>}
+  {success && <p role="status">{successMessage}</p>}
   <div className="flex flex-wrap gap-3">
    <button type="submit" disabled={busy || changed || Boolean(validation)} className={primary}>{busy ? "Saving..." : saveLabel}</button>
    <button type="button" disabled={busy || draft === undefined} className="rounded border px-4 py-2" onClick={() => { setDraft(undefined); setBase(undefined); setError(""); setSuccess(false); }}>Cancel / Revert</button>
