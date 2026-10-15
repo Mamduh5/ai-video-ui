@@ -12,6 +12,22 @@ const observation={id:"fresh-check",at:base.server_now,status:"connected",video_
 const held:AutopilotData={...base,accounting_review:{can_release:false,reason:"A new allowance window has not been observed yet."},scheduler:{...base.scheduler,enabled:false,recovery_only:true,provider_block_reason:"external_submission_accounting",submissions_this_window:3,window_started_at:"2026-10-14T12:23:00Z",provider_observation:observation,queue:[item]}};
 function mount(data=base){vi.mocked(apiJson).mockResolvedValue(data);const client=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={client}><MemoryRouter><GeminiAutopilotPage/></MemoryRouter></QueryClientProvider>);return client}
 describe("Gemini Studio",()=>{
+ it("explains the owner's short note and unchecked confirmation instead of silently disabling recovery",async()=>{
+  mount({...held,accounting_review:{can_release:false,can_confirm_observed_reset:true,reason:"Owner review available."}});
+  fireEvent.click(await screen.findByRole("button",{name:"Check Gemini & Resume"}));
+  const note=await screen.findByLabelText("What did you observe when Gemini usage reset?");
+  fireEvent.change(note,{target:{value:"at zero"}});
+  const close=screen.getByRole("button",{name:"Close old window"});
+  expect(close).toBeDisabled();expect(note).toHaveAttribute("aria-invalid","true");
+  expect(note).toHaveAccessibleDescription(/at least 15 characters.*8 more characters needed/);
+  expect(screen.getByText("To enable Close old window, add 8 more characters to your observation.")).toBeVisible();
+  expect(screen.getByText(/Select the confirmation checkbox to approve/)).toBeVisible();
+  fireEvent.change(note,{target:{value:"I observed the usage reset after the earlier submissions."}});
+  expect(close).toBeDisabled();expect(note).toHaveAttribute("aria-invalid","false");
+  fireEvent.click(screen.getByRole("checkbox"));
+  expect(close).toBeEnabled();expect(screen.getByText("Confirmation complete. Close old window is ready.")).toBeVisible();
+  expect(vi.mocked(apiJson).mock.calls.some(([path])=>String(path).includes("/accounting/release"))).toBe(false);
+ });
  it("requires renewed confirmation when the provider reading changes",async()=>{
   const ready={...held,accounting_review:{can_release:true,reason:"Fresh rollover observed."}};
   const client=mount(ready);
