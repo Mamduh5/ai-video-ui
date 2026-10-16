@@ -70,3 +70,42 @@ it("each new Gemini queue form reloads saved defaults after a per-video override
  fireEvent.change(screen.getByLabelText("Scenes"),{target:{value:"5"}});fireEvent.change(screen.getByLabelText("Idea"),{target:{value:"Fixture idea"}});fireEvent.click(screen.getByRole("button",{name:"Add to Queue"}));
  await waitFor(()=>expect(screen.queryByRole("button",{name:"Add to Queue"})).not.toBeInTheDocument());await waitFor(()=>expect(screen.getByRole("button",{name:"+ Queue Video"})).toBeEnabled());fireEvent.click(screen.getByRole("button",{name:"+ Queue Video"}));expect(screen.getByLabelText("Scenes")).toHaveValue(3);expect(defaults.gemini.scene_count).toBe(3);
 });
+
+
+it("shows Dense for missing provider defaults and explicitly saves both new-project snapshots", async () => {
+ mockReads(); const reads=vi.mocked(apiJson).getMockImplementation()!;
+ vi.mocked(apiJson).mockImplementation(async(path,init)=>init?.method === "POST" ? {...init.body as VideoSettings,version:1} : reads(path,init));
+ show(<SettingsPage/>); const form=await screen.findByRole("form",{name:"General / Video Defaults"});
+ expect(within(form).getByLabelText("Generation mode")).toHaveValue("dense_performance");
+ fireEvent.click(within(form).getByRole("button",{name:"Save Changes"})); await screen.findByText("Changes saved.");
+ const dense={version:"generation_settings.v1",mode:"dense_performance",performance_tempo:2};
+ expect(apiJson).toHaveBeenCalledWith("/settings/video",{method:"POST",body:{...defaults,flow:{...defaults.flow,generation_settings:dense},gemini:{...defaults.gemini,generation_settings:dense}}});
+ expect(defaults.flow).not.toHaveProperty("generation_settings"); expect(defaults.gemini).not.toHaveProperty("generation_settings");
+});
+
+it("preserves explicit provider defaults and saved Dense tempo when saving unrelated settings", async () => {
+ mockReads(); const reads=vi.mocked(apiJson).getMockImplementation()!;
+ const saved:VideoSettings={...defaults,flow:{...defaults.flow,generation_settings:{version:"generation_settings.v1",mode:"standard",performance_tempo:1}},gemini:{...defaults.gemini,generation_settings:{version:"generation_settings.v1",mode:"dense_performance",performance_tempo:1.5,dialogue_language:"Thai"}}};
+ vi.mocked(apiJson).mockImplementation(async(path,init)=>init?.method === "POST" ? {...init.body as VideoSettings,version:1} : path === "/settings/video" ? saved : reads(path,init));
+ show(<SettingsPage/>); const form=await screen.findByRole("form",{name:"General / Video Defaults"});
+ expect(within(form).getByLabelText("Generation mode")).toHaveValue("standard");
+ fireEvent.change(within(form).getByLabelText("Preferred workflow"),{target:{value:"gemini_web"}});
+ expect(within(form).getByText(/Dense content-allocation setting: 1.5x/)).toBeVisible(); expect(within(form).queryByLabelText("Fast creative tempo")).toBeNull();
+ fireEvent.click(within(form).getByRole("button",{name:"Save Changes"})); await screen.findByText("Changes saved.");
+ expect(apiJson).toHaveBeenCalledWith("/settings/video",{method:"POST",body:{...saved,preferred_workflow:"gemini_web"}});
+});
+
+it("Gemini new ideas persist Dense by default and reset an explicit Fast override for the next idea", async () => {
+ const data={available:true,server_now:"2026-10-17T04:00:00Z",video_defaults:defaults,runtime_notice:"fixture",capabilities:{aspect_ratios:["16:9"],native_seconds:10,max_scenes:8},scheduler:{enabled:false,configured_submission_cap:4,submissions_this_window:0,queue:[]}};
+ vi.mocked(apiJson).mockImplementation(async(_path,init)=>init?.method ? {job_id:"fixture"} : data); show(<GeminiAutopilotPage/>);
+ const queue=await screen.findByRole("button",{name:"+ Queue Video"}); await waitFor(()=>expect(queue).toBeEnabled()); fireEvent.click(queue);
+ expect(screen.getByLabelText("Generation mode")).toHaveValue("dense_performance"); fireEvent.change(screen.getByLabelText("Idea"),{target:{value:"A complete dramatic explanation."}});
+ fireEvent.click(screen.getByRole("button",{name:"Add to Queue"})); await screen.findByText("Idea added to your queue.");
+ expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"dense_performance",performance_tempo:2}})}));
+ fireEvent.click(queue); fireEvent.change(screen.getByLabelText("Generation mode"),{target:{value:"fast_performance"}}); fireEvent.change(screen.getByLabelText("Fast creative tempo"),{target:{value:"2.5"}});
+ fireEvent.change(screen.getByLabelText("Idea"),{target:{value:"A substantial quick exchange with an immediate consequence."}}); fireEvent.click(screen.getByRole("button",{name:"Add to Queue"}));
+ await waitFor(()=>expect(screen.queryByRole("button",{name:"Add to Queue"})).toBeNull());
+ expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:2.5}})}));
+ fireEvent.click(queue); expect(screen.getByLabelText("Generation mode")).toHaveValue("dense_performance"); expect(screen.queryByLabelText("Fast creative tempo")).toBeNull();
+ expect(vi.mocked(apiJson).mock.calls.filter(([,init])=>init?.method)).toHaveLength(2);
+});

@@ -5,7 +5,7 @@ import { bangkokTime } from "../lib/autopilotTime";
 import { SectionEditor } from "../features/settings/SectionEditor";
 import { GeminiQuotaForm } from "../features/settings/GeminiQuotaForm";
 import { StorageSettingsForm } from "../features/settings/StorageSettingsForm";
-import { field, validateGenerationSettings, quotaSourceLabel, type VideoSettings, type CreationOptions, type StorageSettings, type QuotaConfig, type QuotaTiming } from "../features/settings/contracts";
+import { field, generationSettingsForNewProject, validateGenerationSettings, quotaSourceLabel, type VideoSettings, type CreationOptions, type StorageSettings, type QuotaConfig, type QuotaTiming } from "../features/settings/contracts";
 import { GenerationSettingsFields } from "./GenerationSettingsFields";
 import { AutopilotFailure, type FailureDetail } from "./autopilotStatus";
 import type { StorageData } from "./StoragePage";
@@ -35,14 +35,14 @@ export function SettingsPage() {
   <nav aria-label="Settings sections" className="flex flex-wrap gap-3">{sectionLinks.map(([id, label]) => <a key={id} className="rounded border bg-white px-3 py-2 text-sm" href={`#${id}`}>{label}</a>)}</nav>
   <div id="general" className="scroll-mt-4">
    {video.isLoading && <p role="status">Loading video defaults...</p>}{video.isError && <p role="alert">{video.error.message}</p>}{options.isError && <p role="alert">{options.error.message}</p>}
-   {video.data && <SectionEditor title="General / Video Defaults" saved={video.data} validate={validateVideo} onReload={() => video.refetch({ throwOnError: true })} onSave={async value => { const result = await apiJson<VideoSettings>("/settings/video", { method: "POST", body: value }); client.setQueryData(["videoSettings"], result); await client.invalidateQueries({ queryKey: ["videoCreationOptions"] }); }}>{(s, edit) => {
+   {video.data && <SectionEditor title="General / Video Defaults" saved={video.data} validate={validateVideo} onReload={() => video.refetch({ throwOnError: true })} onSave={async value => { const result = await apiJson<VideoSettings>("/settings/video", { method: "POST", body: { ...value, flow: { ...value.flow, generation_settings: generationSettingsForNewProject(value.flow.generation_settings) }, gemini: { ...value.gemini, generation_settings: generationSettingsForNewProject(value.gemini.generation_settings) } } }); client.setQueryData(["videoSettings"], result); await client.invalidateQueries({ queryKey: ["videoCreationOptions"] }); }}>{(s, edit) => {
     const key = s.preferred_workflow === "gemini_web" ? "gemini" : "flow"; const d = s[key]; const isGemini = key === "gemini";
     const ceiling=options.data?.hard_scene_limit??caps?.max_scene_count??1;const maximum=Number.isInteger(d.max_scenes)?Math.max(1,Math.min(d.max_scenes??ceiling,ceiling)):ceiling;
     const update = (patch: Partial<typeof d>) => edit({ ...s, [key]: { ...d, ...patch } });
     return <><p className="text-sm">Applies only to newly created projects. Override these defaults for any individual video.</p>
      <label className="block">Preferred workflow<select className={field} value={s.preferred_workflow} onChange={e => edit({ ...s, preferred_workflow: e.target.value })}><option value="flow_web">Flow (supervised)</option><option value="gemini_web">Gemini Autopilot (automatic)</option></select></label>
      <p className="text-sm text-slate-600">{isGemini ? "Gemini uses native 10-second landscape videos with native audio. Creative quality remains unreviewed." : "Flow preserves human approval and its configured model capabilities."} {isGemini && !options.data?.gemini_available ? "Gemini is currently not configured." : !isGemini && !options.data?.standard_available ? "Flow is currently not configured." : ""}</p>
-     <GenerationSettingsFields value={d.generation_settings} onChange={generation_settings=>update({generation_settings})} sourceSeconds={d.scene_seconds}/>
+     <GenerationSettingsFields value={generationSettingsForNewProject(d.generation_settings)} onChange={generation_settings=>update({generation_settings})} sourceSeconds={d.scene_seconds}/>
      <label className="block">Maximum scenes allowed<input className={field} type="number" min={1} max={ceiling} step={1} value={Number.isNaN(d.max_scenes)?"":d.max_scenes??ceiling} onChange={e=>update({max_scenes:e.target.value===""?NaN:Number(e.target.value)})}/></label><p className="text-sm">Allowed range: 1-{ceiling}. This controls selectable counts for new videos. The default count is independent; existing projects keep their saved scene count.</p>
      <div className="grid gap-4 sm:grid-cols-2"><label className="block">Default scene count<select className={field} value={d.scene_count} onChange={e => update({ scene_count: Number(e.target.value) })}>{Array.from({ length: maximum }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}</select></label>
      <label className="block">Default scene duration<select className={field} value={d.scene_seconds} onChange={e => update({ scene_seconds: Number(e.target.value) })}>{(isGemini ? [10] : caps?.scene_durations ?? []).map(n => <option key={n} value={n}>{n} seconds</option>)}</select></label>

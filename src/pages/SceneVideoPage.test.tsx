@@ -31,7 +31,7 @@ describe("manual Flow pages", () => {
     await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs/authored/storyboard/import",{method:"POST",body:{story_summary:"Original authored plan",scenes:[]}}));
     expect(apiJson).not.toHaveBeenCalledWith("/flow-autopilot/queue",expect.anything());
   });
-  it("creates a Standard Video without opening Advanced", async () => {
+  it("creates a Dense Video by default without opening Advanced", async () => {
     vi.mocked(apiJson).mockImplementation(async path => path === "/scene-video-options" ? {standard_available:true,scene_seconds:8,initial_keyframe_enabled:true} : {job_id:"scene-1"});
     const user=userEvent.setup(); const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
     render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/scene-jobs/create"]}><Routes><Route path="/scene-jobs/create" element={<CreateSceneVideoPage/>}/><Route path="/scene-jobs/:jobId" element={<p>Created scene job</p>}/></Routes></MemoryRouter></QueryClientProvider>);
@@ -40,7 +40,7 @@ describe("manual Flow pages", () => {
     await user.type(screen.getByLabelText("Idea / story"),"rain");
     await user.click(await screen.findByRole("button",{name:"Generate Storyboard"}));
     expect(await screen.findByText("Created scene job")).toBeInTheDocument();
-    expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",{method:"POST",body:{preset:"standard_video",title:"Crystal Robot",topic:"rain",character:"",scene_count:2,aspect_ratio:"16:9",scene_seconds:8,audio_policy:"clip_native",reference_mode:"none",review_policy:"ai_assisted",continuity_mode:"chained_frames",opening_image_required:true}});
+    expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",{method:"POST",body:{preset:"standard_video",title:"Crystal Robot",topic:"rain",character:"",generation_settings:{version:"generation_settings.v1",mode:"dense_performance",performance_tempo:2},scene_count:2,aspect_ratio:"16:9",scene_seconds:8,audio_policy:"clip_native",reference_mode:"none",review_policy:"ai_assisted",continuity_mode:"chained_frames",opening_image_required:true}});
   });
 
   it("supports real advanced continuity and reference overrides", async () => {

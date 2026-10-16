@@ -1,13 +1,13 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiJson } from "../lib/apiClient";
-import type { GenerationSettings } from "../features/settings/contracts";
+import { generationSettingsForExistingProject, type GenerationSettings } from "../features/settings/contracts";
 import { GenerationSettingsFields } from "./GenerationSettingsFields";
 
 type RevisionSource = { title?: string; topic?: string; character?: string; scene_count?: number; aspect_ratio?: string; scene_seconds?: number; preset?: string; audio_policy?: string; review_policy?: string; reference_mode?: string; continuity_mode?: string; generation_provider?: string; generation_resolution?: string; generation_settings?: GenerationSettings; autopilot?: unknown; opening_image?: { required?: boolean }; production?: { mode?: string }; planner_provenance?: { provider: string }; scenes?: { generation_request: { duration_seconds: number; generation_settings?: GenerationSettings } }[] };
 export function GenerationRevisionPanel({ job }: { job: RevisionSource }) {
   const navigate = useNavigate();
-  const [value, setValue] = useState<GenerationSettings>(job.generation_settings ?? job.scenes?.[0]?.generation_request.generation_settings ?? { version: "generation_settings.v1", mode: "standard", performance_tempo: 1 });
+  const [value, setValue] = useState<GenerationSettings>(generationSettingsForExistingProject(job.generation_settings ?? job.scenes?.[0]?.generation_request.generation_settings));
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const createdRevision = useRef<string | undefined>(undefined);

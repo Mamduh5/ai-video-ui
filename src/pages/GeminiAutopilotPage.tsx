@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { apiJson } from "../lib/apiClient";
 import { AutopilotFailure, type FailureDetail } from "./autopilotStatus";
 import { bangkokTime } from "../lib/autopilotTime";
-import { runningTime, validateGenerationSettings, type QuotaTiming, type VideoSettings, type GenerationSettings } from "../features/settings/contracts";
+import { runningTime, generationSettingsForNewProject, validateGenerationSettings, type QuotaTiming, type VideoSettings, type GenerationSettings } from "../features/settings/contracts";
 import { GenerationSettingsFields } from "./GenerationSettingsFields";
 import { primary } from "./videoProduct";
 
@@ -27,10 +27,10 @@ export function GeminiAutopilotPage(){
  async function runRecovery(body:Record<string,unknown>,doneNotice:string){if(await control("/gemini-autopilot/recover",body)){setUncertainConfirmed(false);setUncertainNote("");setEditingPrompt(false);setNotice(doneNotice);}}
  async function resume(){if(await control("/gemini-autopilot/control/resume")){setReview(false);setNotice("Autopilot resumed. Your queue will run when Gemini is eligible.");}}
  async function release(){if(await control("/gemini-autopilot/accounting/release",{observation_id:o?.id,owner_confirmed:confirmed,...(!data?.accounting_review?.can_release&&data?.accounting_review?.can_confirm_observed_reset?{owner_reset_observed:true,owner_reset_note:ownerResetNote}:{})})){setReview(true);setConfirmedObservation(undefined);setNotice("Recovery confirmed and history saved. Choose Resume Autopilot below to start your queued videos.");}}
- async function add(event:FormEvent){event.preventDefault();if(busy)return;const generationError=validateGenerationSettings(generation);if(generationError){setError(generationError);return;}if(!Number.isInteger(scenes)||scenes<1||scenes>(query.data?.capabilities.max_scenes??0)){setError("Choose a whole scene count within the configured maximum.");return;}if(await control("/gemini-autopilot/queue",{title,idea,scene_count:scenes,aspect_ratio:aspect,...(generation?{generation_settings:generation}:{})})){setForm(false);setTitle("");setIdea("");setGeneration(undefined);setNotice("Idea added to your queue.");}}
+ async function add(event:FormEvent){event.preventDefault();if(busy)return;const generationError=validateGenerationSettings(generation);if(generationError){setError(generationError);return;}if(!Number.isInteger(scenes)||scenes<1||scenes>(query.data?.capabilities.max_scenes??0)){setError("Choose a whole scene count within the configured maximum.");return;}if(await control("/gemini-autopilot/queue",{title,idea,scene_count:scenes,aspect_ratio:aspect,generation_settings:generation})){setForm(false);setTitle("");setIdea("");setGeneration(undefined);setNotice("Idea added to your queue.");}}
  const data=query.data,s=data?.scheduler,o=s?.provider_observation,r=data?.recovery_status;
  const scenes=sceneOverride??data?.video_defaults?.gemini.scene_count??2,aspect=aspectOverride??data?.video_defaults?.gemini.aspect_ratio??"16:9";
- const generation=generationOverride??data?.video_defaults?.gemini.generation_settings;
+ const generation=generationOverride??generationSettingsForNewProject(data?.video_defaults?.gemini.generation_settings);
  const confirmed=Boolean(o&&confirmedObservation===o.id);
  const ownerNoteRequired=Boolean(data?.accounting_review?.can_confirm_observed_reset&&!data.accounting_review.can_release);
  const ownerNoteRemaining=Math.max(0,15-ownerResetNote.trim().length);

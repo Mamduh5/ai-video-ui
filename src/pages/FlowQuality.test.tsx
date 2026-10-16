@@ -58,7 +58,7 @@ it("keeps Flow quality out of Gemini creation", async () => {
  expect(screen.queryByLabelText("Generation quality")).not.toBeInTheDocument();
  await user.type(screen.getByLabelText("Idea / story"), "A quiet garden");
  await user.click(screen.getByRole("button", {name:"Add to Gemini Queue"}));
- await waitFor(() => expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue", {method:"POST",body:{title:"",idea:"A quiet garden",scene_count:2,aspect_ratio:"16:9"}}));
+ await waitFor(() => expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue", {method:"POST",body:{title:"",idea:"A quiet garden",scene_count:2,aspect_ratio:"16:9",generation_settings:{version:"generation_settings.v1",mode:"dense_performance",performance_tempo:2}}}));
 });
 
 it("displays saved draft quality and preserves it when regenerating the storyboard", async () => {
