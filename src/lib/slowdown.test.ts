@@ -25,7 +25,7 @@ it("applies missing-mode Dense defaults only at the explicit new-project boundar
  expect(generationSettingsForNewProject()).toEqual(expected);
  expect(generationSettingsForNewProject({} as GenerationSettings)).toEqual(expected);
  expect(generationSettingsForNewProject({mode:"",dialogue_language:"Thai"} as unknown as GenerationSettings)).toEqual({...expected,dialogue_language:"Thai"});
- for(const mode of ["standard","dense_performance","fast_performance"] as const) {
+ for(const mode of ["standard","dense_performance"] as const) {
   const saved:GenerationSettings={version:"generation_settings.v1",mode,performance_tempo:mode === "standard" ? 1 : 1.5};
   expect(generationSettingsForNewProject(saved)).toBe(saved);
  }

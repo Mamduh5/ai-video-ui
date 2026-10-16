@@ -105,7 +105,7 @@ it("Gemini new ideas persist Dense by default and reset an explicit Fast overrid
  fireEvent.click(queue); fireEvent.change(screen.getByLabelText("Generation mode"),{target:{value:"fast_performance"}}); fireEvent.change(screen.getByLabelText("Fast creative tempo"),{target:{value:"2.5"}});
  fireEvent.change(screen.getByLabelText("Idea"),{target:{value:"A substantial quick exchange with an immediate consequence."}}); fireEvent.click(screen.getByRole("button",{name:"Add to Queue"}));
  await waitFor(()=>expect(screen.queryByRole("button",{name:"Add to Queue"})).toBeNull());
- expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:2.5}})}));
+ expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:2.5,fast_version:"fast_performance.v2"}})}));
  fireEvent.click(queue); expect(screen.getByLabelText("Generation mode")).toHaveValue("dense_performance"); expect(screen.queryByLabelText("Fast creative tempo")).toBeNull();
  expect(vi.mocked(apiJson).mock.calls.filter(([,init])=>init?.method)).toHaveLength(2);
 });

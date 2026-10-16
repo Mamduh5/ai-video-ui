@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiJson } from "../lib/apiClient";
-import { generationSettingsForExistingProject, type GenerationSettings } from "../features/settings/contracts";
+import { generationSettingsForExistingProject, generationSettingsForReplannedProject, type GenerationSettings } from "../features/settings/contracts";
 import { GenerationSettingsFields } from "./GenerationSettingsFields";
 
 type RevisionSource = { title?: string; topic?: string; character?: string; scene_count?: number; aspect_ratio?: string; scene_seconds?: number; preset?: string; audio_policy?: string; review_policy?: string; reference_mode?: string; continuity_mode?: string; generation_provider?: string; generation_resolution?: string; generation_settings?: GenerationSettings; autopilot?: unknown; opening_image?: { required?: boolean }; production?: { mode?: string }; planner_provenance?: { provider: string }; scenes?: { generation_request: { duration_seconds: number; generation_settings?: GenerationSettings } }[] };
@@ -19,7 +19,7 @@ export function GenerationRevisionPanel({ job }: { job: RevisionSource }) {
     if (busyRef.current || !job.topic) return;
     busyRef.current = true; setBusy(true); setError("");
     try {
-      const common = { title: `${(job.title || "Untitled video").slice(0, 69)} (revision)`, scene_count: job.scene_count && job.scene_count > 0 ? job.scene_count : job.scenes?.length ?? 2, aspect_ratio: job.aspect_ratio, generation_settings: value };
+      const common = { title: `${(job.title || "Untitled video").slice(0, 69)} (revision)`, scene_count: job.scene_count && job.scene_count > 0 ? job.scene_count : job.scenes?.length ?? 2, aspect_ratio: job.aspect_ratio, generation_settings: generationSettingsForReplannedProject(value) };
       if (!createdRevision.current) {
       const result = await apiJson<{ job_id: string }>(gemini ? "/gemini-autopilot/queue" : "/scene-video-jobs", { method: "POST", body: gemini ? { ...common, idea: job.topic } : { ...common, topic: job.topic, character: job.character, scene_seconds: sourceSeconds, preset: job.preset || "standard_video", generation_resolution: job.generation_resolution, audio_policy: job.audio_policy, review_policy: job.review_policy, reference_mode: job.reference_mode, continuity_mode: job.continuity_mode, opening_image_required: job.opening_image?.required, ...(["colab_qwen", "operator_authored"].includes(job.planner_provenance?.provider ?? "") ? { planning_provider: job.planner_provenance?.provider } : {}) } });
       createdRevision.current = result.job_id; setCreatedId(result.job_id);

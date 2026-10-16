@@ -25,7 +25,7 @@ it("Fast allocates substantial content without changing native duration, preserv
   fireEvent.change(screen.getByLabelText("Generation mode"),{target:{value:"fast_performance"}}); fireEvent.change(screen.getByLabelText("Fast creative tempo"),{target:{value:"2.5"}}); fireEvent.change(screen.getByLabelText("Dialogue language (optional)"),{target:{value:"Thai"}});
   expect(screen.getByText(/Source generation duration: 8 seconds/)).toBeVisible(); expect(screen.queryByText(/Approximate normal-paced content target/)).toBeNull(); expect(screen.getByLabelText("Scene length")).toHaveValue("8");
   expect(screen.queryByLabelText(/playback speed/i)).toBeNull(); fireEvent.change(screen.getByLabelText("Storyboard planner"),{target:{value:"colab_qwen"}}); fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"พ่อ: อธิบายสิ่งที่เกิดขึ้น ลูก: ผมจะบอกความจริงทั้งหมด"}}); fireEvent.click(screen.getByRole("button",{name:"Generate Storyboard"})); await screen.findByText("Revised project ready");
-  expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({method:"POST",body:expect.objectContaining({planning_provider:"colab_qwen",scene_seconds:8,generation_settings:{...dense,mode:"fast_performance",performance_tempo:2.5}})}));
+  expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({method:"POST",body:expect.objectContaining({planning_provider:"colab_qwen",scene_seconds:8,generation_settings:{...dense,mode:"fast_performance",performance_tempo:2.5,fast_version:"fast_performance.v2"}})}));
 });
 it("explicit Standard overrides a Dense default and Gemini uses its actual native source duration", async () => {
   vi.mocked(apiJson).mockImplementation(async path => path === "/scene-video-options" ? {...options,video_defaults:{...options.video_defaults,preferred_workflow:"gemini_web",gemini:{...options.video_defaults.gemini,generation_settings:dense}}} : {job_id:"new"}); mount(<CreateSceneVideoPage/>); await screen.findByRole("button",{name:"Add to Gemini Queue"});
@@ -61,7 +61,7 @@ it.each([1.5, 2, 2.5] as const)("persists explicit Fast %sx while keeping tempo 
  fireEvent.change(screen.getByLabelText("Fast creative tempo"),{target:{value:String(tempo)}});
  fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"Father gives a full accusation; son explains the hospital emergency and presents proof."}});
  fireEvent.click(screen.getByRole("button",{name:"Generate Storyboard"})); await screen.findByText("Revised project ready");
- expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:tempo}})}));
+ expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:tempo,fast_version:"fast_performance.v2"}})}));
 });
 
 it.each(["standard", "fast_performance"] as const)("honors the stored explicit %s default without changing it to Dense", async mode => {
@@ -71,7 +71,7 @@ it.each(["standard", "fast_performance"] as const)("honors the stored explicit %
  expect(Boolean(screen.queryByLabelText("Fast creative tempo"))).toBe(mode === "fast_performance");
  fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"A substantial consequential discussion."}});
  fireEvent.click(screen.getByRole("button",{name:"Generate Storyboard"})); await screen.findByText("Revised project ready");
- expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({body:expect.objectContaining({generation_settings:saved})}));
+ expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({body:expect.objectContaining({generation_settings:mode === "fast_performance" ? {...saved,fast_version:"fast_performance.v2"} : saved})}));
 });
 
 it.each([1.5, 2, 2.5] as const)("retains historical Dense %sx in a revision while hiding tempo editing", async tempo => {
@@ -105,7 +105,7 @@ it("retains an explicit mode selection when provider defaults arrive asynchronou
  resolveOptions(options); await waitFor(()=>expect(screen.getByLabelText("Scene length")).toBeEnabled());
  expect(screen.getByLabelText("Generation mode")).toHaveValue("fast_performance"); expect(screen.getByLabelText("Fast creative tempo")).toHaveValue("1.5");
  fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"A substantial conversation."}}); fireEvent.click(screen.getByRole("button",{name:"Generate Storyboard"})); await screen.findByText("Revised project ready");
- expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:1.5}})}));
+ expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:1.5,fast_version:"fast_performance.v2"}})}));
 });
 
 
