@@ -5,7 +5,8 @@ import { bangkokTime } from "../lib/autopilotTime";
 import { SectionEditor } from "../features/settings/SectionEditor";
 import { GeminiQuotaForm } from "../features/settings/GeminiQuotaForm";
 import { StorageSettingsForm } from "../features/settings/StorageSettingsForm";
-import { field, quotaSourceLabel, type VideoSettings, type CreationOptions, type StorageSettings, type QuotaConfig, type QuotaTiming } from "../features/settings/contracts";
+import { field, validateGenerationSettings, quotaSourceLabel, type VideoSettings, type CreationOptions, type StorageSettings, type QuotaConfig, type QuotaTiming } from "../features/settings/contracts";
+import { GenerationSettingsFields } from "./GenerationSettingsFields";
 import { AutopilotFailure, type FailureDetail } from "./autopilotStatus";
 import type { StorageData } from "./StoragePage";
 
@@ -23,7 +24,7 @@ export function SettingsPage() {
  function validateVideo(s: VideoSettings) {
   if (!caps) return "Loading provider capabilities...";
   const ceiling=options.data?.hard_scene_limit??caps.max_scene_count;
-  for (const d of [s.flow,s.gemini]) {const maximum=d.max_scenes??ceiling;if (!Number.isInteger(maximum)||maximum<1||maximum>ceiling)return `Maximum scenes must be a whole number from 1 to ${ceiling}.`;if (!Number.isInteger(d.scene_count)||d.scene_count<1||d.scene_count>maximum)return "Default scene count cannot exceed the configured maximum.";}
+  for (const d of [s.flow,s.gemini]) {const generationError=validateGenerationSettings(d.generation_settings);if(generationError)return generationError;const maximum=d.max_scenes??ceiling;if (!Number.isInteger(maximum)||maximum<1||maximum>ceiling)return `Maximum scenes must be a whole number from 1 to ${ceiling}.`;if (!Number.isInteger(d.scene_count)||d.scene_count<1||d.scene_count>maximum)return "Default scene count cannot exceed the configured maximum.";}
   if (s.flow.scene_count < caps.min_scene_count || s.flow.scene_count > (s.flow.max_scenes??caps.max_scene_count) || !Number.isInteger(s.flow.scene_count)) return "Choose a supported Flow scene count.";
   if (!caps.scene_durations.includes(s.flow.scene_seconds) || !caps.aspect_ratios.includes(s.flow.aspect_ratio) || !["silent", "clip_native"].includes(s.flow.audio_policy)) return "Choose supported Flow defaults.";
   if (!Number.isInteger(s.gemini.scene_count) || s.gemini.scene_count < 1 || s.gemini.scene_count > (s.gemini.max_scenes??options.data?.hard_scene_limit??8) || s.gemini.scene_seconds !== 10 || s.gemini.aspect_ratio !== "16:9" || s.gemini.audio_policy !== "clip_native") return "Gemini requires scenes within the configured maximum, 10 seconds, 16:9 and native audio.";
@@ -41,6 +42,7 @@ export function SettingsPage() {
     return <><p className="text-sm">Applies only to newly created projects. Override these defaults for any individual video.</p>
      <label className="block">Preferred workflow<select className={field} value={s.preferred_workflow} onChange={e => edit({ ...s, preferred_workflow: e.target.value })}><option value="flow_web">Flow (supervised)</option><option value="gemini_web">Gemini Autopilot (automatic)</option></select></label>
      <p className="text-sm text-slate-600">{isGemini ? "Gemini uses native 10-second landscape videos with native audio. Creative quality remains unreviewed." : "Flow preserves human approval and its configured model capabilities."} {isGemini && !options.data?.gemini_available ? "Gemini is currently not configured." : !isGemini && !options.data?.standard_available ? "Flow is currently not configured." : ""}</p>
+     <GenerationSettingsFields value={d.generation_settings} onChange={generation_settings=>update({generation_settings})} sourceSeconds={d.scene_seconds}/>
      <label className="block">Maximum scenes allowed<input className={field} type="number" min={1} max={ceiling} step={1} value={Number.isNaN(d.max_scenes)?"":d.max_scenes??ceiling} onChange={e=>update({max_scenes:e.target.value===""?NaN:Number(e.target.value)})}/></label><p className="text-sm">Allowed range: 1-{ceiling}. This controls selectable counts for new videos. The default count is independent; existing projects keep their saved scene count.</p>
      <div className="grid gap-4 sm:grid-cols-2"><label className="block">Default scene count<select className={field} value={d.scene_count} onChange={e => update({ scene_count: Number(e.target.value) })}>{Array.from({ length: maximum }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}</select></label>
      <label className="block">Default scene duration<select className={field} value={d.scene_seconds} onChange={e => update({ scene_seconds: Number(e.target.value) })}>{(isGemini ? [10] : caps?.scene_durations ?? []).map(n => <option key={n} value={n}>{n} seconds</option>)}</select></label>

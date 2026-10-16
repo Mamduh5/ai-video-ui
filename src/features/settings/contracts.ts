@@ -1,4 +1,12 @@
-export type VideoDefaults = { max_scenes?: number; scene_count: number; scene_seconds: number; aspect_ratio: string; audio_policy: string };
+export type GenerationSettings = { version: "generation_settings.v1"; mode: "standard" | "dense_performance"; performance_tempo: 1 | 1.5 | 2 | 2.5; dialogue_language?: string };
+export function validateGenerationSettings(value?: GenerationSettings): string {
+ if (!value) return "";
+ if (value.version !== "generation_settings.v1" || !["standard", "dense_performance"].includes(value.mode)) return "Choose a supported generation mode.";
+ if (value.mode === "standard" ? value.performance_tempo !== 1 : ![1.5, 2, 2.5].includes(value.performance_tempo)) return "Choose a supported requested performance tempo.";
+ if (value.dialogue_language && value.dialogue_language.length > 80) return "Dialogue language must be 80 characters or fewer.";
+ return "";
+}
+export type VideoDefaults = { generation_settings?: GenerationSettings; max_scenes?: number; scene_count: number; scene_seconds: number; aspect_ratio: string; audio_policy: string };
 export type VideoSettings = { version: number; preferred_workflow: string; flow: VideoDefaults; gemini: VideoDefaults };
 export type GenerationResolution = "360p" | "720p";
 export function flowQualityLabel(resolution?: GenerationResolution) { return resolution === "360p" ? "Draft 360p" : "Standard 720p"; }

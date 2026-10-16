@@ -21,3 +21,10 @@ describe("seekable review player", () => {
     view.rerender(<ReviewPlayer src="/second.mp4" label="Scene 1"/>);const second=screen.getByLabelText("Scene 1 video") as HTMLVideoElement;expect(second).not.toBe(first);Object.defineProperty(second,"duration",{value:Infinity});fireEvent.loadedMetadata(second);expect(screen.getByLabelText("Scene 1 seek")).toBeDisabled();expect(screen.getByLabelText("Playback time")).toHaveTextContent("00:00 / 00:00");
   });
 });
+
+it("previews exact slowdown using actual duration, resets to original and never applies creative tempo",()=>{
+ render(<ReviewPlayer src="/eight.mp4" label="Scene 1"/>);const video=screen.getByLabelText("Scene 1 video") as HTMLVideoElement;Object.defineProperty(video,"duration",{value:8});fireEvent.loadedMetadata(video);const speed=screen.getByLabelText("Scene 1 playback speed");expect(speed).toHaveValue("1");fireEvent.change(speed,{target:{value:String(2/3)}});expect(video.playbackRate).toBe(2/3);expect(video.preservesPitch).toBe(true);expect(screen.getByLabelText("Scene 1 viewing duration")).toHaveTextContent("12 seconds");fireEvent.change(speed,{target:{value:"0.4"}});expect(screen.getByLabelText("Scene 1 viewing duration")).toHaveTextContent("20 seconds");fireEvent.change(speed,{target:{value:"1"}});expect(video.playbackRate).toBe(1);expect(video.getAttribute("src")).toBe("/eight.mp4");
+});
+it("reports unsupported browser slowdown and keeps original playback",()=>{
+ render(<ReviewPlayer src="/unsupported.mp4" label="Scene 1"/>);const video=screen.getByLabelText("Scene 1 video") as HTMLVideoElement;let rate=1;Object.defineProperty(video,"playbackRate",{configurable:true,get:()=>rate,set:(next:number)=>{if(next===0.4)throw new Error("Unsupported");rate=next;}});fireEvent.change(screen.getByLabelText("Scene 1 playback speed"),{target:{value:"0.4"}});expect(rate).toBe(1);expect(screen.getByText(/This browser cannot preview the selected speed/)).toBeVisible();rate=2;fireEvent.rateChange(video);expect(rate).toBe(1);
+});

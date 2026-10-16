@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { playbackRates, rateLabel, secondsLabel, validSlowdownRate } from "../lib/slowdown";
 export type SceneBoundary = { scene_order: number; attempt: number; start_seconds: number; end_seconds: number };
 export type FilmstripFrame = { index: number; timestamp_seconds: number; url: string };
 function formatTime(value: number) { const seconds = Math.max(0, Math.floor(value)); return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0"); }
@@ -7,11 +8,29 @@ function Player({ src, label, boundaries = [], frames = [] }: { src: string; lab
   const video = useRef<HTMLVideoElement>(null);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [rate, setRate] = useState(1);
+  const [rateError, setRateError] = useState("");
   const [error, setError] = useState("");
   const metadata = () => { const value = video.current?.duration ?? 0; setDuration(Number.isFinite(value) && value > 0 ? value : 0); };
   const seek = (target: number) => { if (!video.current || !duration) return; const next = Math.min(duration, Math.max(0, target)); video.current.currentTime = next; setTime(next); };
+  const changeRate = (next: number) => {
+    if (!video.current || !validSlowdownRate(next)) return;
+    try {
+      video.current.preservesPitch = true;
+      video.current.playbackRate = next;
+      if (Math.abs(video.current.playbackRate - next) > 0.001) throw new Error("Unsupported rate");
+      setRate(next); setRateError("");
+    } catch {
+      try { video.current.playbackRate = 1; } catch { /* The original media remains available for download. */ }
+      setRate(1); setRateError("This browser cannot preview the selected speed. Use Export a separate slow version below and play its MP4 at normal 1x.");
+    }
+  };
   return <div className="mt-4 max-w-3xl space-y-3" aria-label={label}>
-    <video ref={video} controls preload="metadata" className="max-h-[70vh] w-full rounded-md bg-black object-contain" src={src} aria-label={label + " video"} onLoadedMetadata={metadata} onDurationChange={metadata} onTimeUpdate={() => setTime(video.current?.currentTime ?? 0)} onSeeked={() => setTime(video.current?.currentTime ?? 0)} onError={() => setError("This video could not load. Refresh to retry.")} />
+    <video ref={video} controls preload="metadata" className="max-h-[70vh] w-full rounded-md bg-black object-contain" src={src} aria-label={label + " video"} onLoadedMetadata={metadata} onDurationChange={metadata} onRateChange={() => { const next = video.current?.playbackRate ?? 1; if (!validSlowdownRate(next)) changeRate(1); else setRate(next); }} onTimeUpdate={() => setTime(video.current?.currentTime ?? 0)} onSeeked={() => setTime(video.current?.currentTime ?? 0)} onError={() => setError("This video could not load. Refresh to retry.")} />
+    <label className="block text-sm">Playback speed of the generated result<select aria-label={label + " playback speed"} className="ml-2 rounded border p-2" value={rate} onChange={e => changeRate(Number(e.target.value))}>{playbackRates.map(value => <option key={value} value={value}>{rateLabel(value)}</option>)}</select></label>
+    <p className="text-sm" aria-label={label + " viewing duration"}>{duration ? `Source: ${secondsLabel(duration)} | Viewing duration at selected speed: ${secondsLabel(duration / rate)}` : "Loading actual source duration..."}</p>
+    <p className="text-xs text-slate-600">Preview changes viewing speed only. Downloads keep their saved timing; export a separate slow version to change an MP4. Strong slowdown may affect voice quality, lip synchronization and motion cadence.</p>
+    {rateError && <p role="status" className="text-amber-800">{rateError}</p>}
     <div className="flex justify-between text-sm tabular-nums"><output aria-label="Playback time">{formatTime(time)} / {formatTime(duration)}</output><span>{label}</span></div>
     <label className="block text-sm">Seek video<input aria-label={label + " seek"} className="block w-full" type="range" min={0} max={duration || 1} step={0.05} value={Math.min(time, duration || 0)} disabled={!duration} onChange={event => seek(Number(event.target.value))} /></label>
     <div className="flex flex-wrap gap-2"><button type="button" disabled={!duration} onClick={() => seek((video.current?.currentTime ?? 0) - 5)} className="rounded border px-3 py-2">−5s</button><button type="button" disabled={!duration} onClick={() => seek((video.current?.currentTime ?? 0) + 5)} className="rounded border px-3 py-2">+5s</button></div>
