@@ -99,4 +99,130 @@ describe("Gemini Studio",()=>{
  it("clears old planning failure after a ready refresh",async()=>{const client=mount({...base,scheduler:{...base.scheduler,queue:[{...item,status:"planning_retry",diagnostic:{code:"planner_timeout",stage:"planning",source:"Planner",message:"Original timeout"}}]}});await screen.findAllByText("Original timeout");client.setQueryData(["geminiAutopilot"],{...base,scheduler:{...base.scheduler,queue:[item]}});await waitFor(()=>expect(screen.queryByText("Original timeout")).not.toBeInTheDocument());expect(screen.getByText("Ready for Gemini")).toBeInTheDocument()});
  it("persists pause",async()=>{mount();fireEvent.click(await screen.findByRole("button",{name:"Pause Autopilot"}));await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/control/pause",{method:"POST",body:undefined}))});
  it("shows an empty queue and no automatic production button",async()=>{mount();expect(await screen.findByText(/Your queue is empty/)).toBeInTheDocument();expect(screen.queryByRole("button",{name:/Start production|Accept scene/i})).not.toBeInTheDocument()});
+ it("recovers a confirmed provider failure via Check & Recover and offers Retry Scene without exposing run IDs",async()=>{
+  const stuck:AutopilotData={
+   ...base,
+   worker_enabled:false,
+   recovery_status:{
+    needs_recovery:true,
+    state:"needs_check",
+    job_id:"e01f77d0-7a21-4aa6-8fe7-fa9581489855",
+    project_title:"Swarm War: Flies vs the Titan Ant",
+    scene_order:3,
+    scene_count:4,
+    scene_title:"THE COUNTERATTACK",
+    run_id:"99e2f931-6433-4d6c-8d0e-f41c8024eb70",
+    failure_code:"provider_error",
+    failure_reason:'Gemini returned an error instead of a video ("I seem to be encountering an error. Can I try something else for you?").',
+    outcome_summary:"Click Check & Recover to inspect the previous Gemini request without spending credits.",
+    can_check_and_recover:true,
+    can_retry_scene:false,
+    can_recover_video:false,
+    can_wait_and_recheck:false,
+    can_edit_prompt:false,
+    can_confirm_uncertain:false,
+   },
+   scheduler:{...base.scheduler,enabled:false,provider_block_reason:"reconciliation_required",submissions_this_window:1,queue:[{...item,job_id:"e01f77d0-7a21-4aa6-8fe7-fa9581489855",title:"Swarm War: Flies vs the Titan Ant",status:"recovering",scene_count:4,accepted_count:2,started:true}]},
+  };
+  const resolved:AutopilotData={
+   ...stuck,
+   recovery_status:{
+    ...stuck.recovery_status!,
+    needs_recovery:false,
+    state:"resolved_ready_to_retry",
+    outcome_summary:"Confirmed that Gemini produced no video for the failed attempt. The safety reservation was released and this scene is ready for a controlled retry.",
+    can_retry_scene:true,
+    can_edit_prompt:true,
+   },
+   scheduler:{...stuck.scheduler,provider_block_reason:undefined,queue:[{...stuck.scheduler.queue[0],status:"ready"}]},
+  };
+  let checked=false;
+  vi.mocked(apiJson).mockImplementation(async(path,options)=>{
+   if(path==="/gemini-autopilot/recover"&&options?.method==="POST"){checked=true;return {status:"ok"};}
+   return checked?resolved:stuck;
+  });
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}});
+  render(<QueryClientProvider client={client}><MemoryRouter><GeminiAutopilotPage/></MemoryRouter></QueryClientProvider>);
+  const panel=await screen.findByRole("region",{name:"Scene recovery"});
+  expect(within(panel).getByText(/Swarm War: Flies vs the Titan Ant · Scene 3 of 4 — THE COUNTERATTACK/)).toBeVisible();
+  expect(within(panel).getByText(/I seem to be encountering an error/)).toBeVisible();
+  expect(panel.textContent).not.toContain("99e2f931-6433-4d6c-8d0e-f41c8024eb70");
+  expect(screen.getByRole("button",{name:"+ Queue Video"})).toBeEnabled();
+  const checkBtn=within(panel).getByRole("button",{name:"Check & Recover"});
+  fireEvent.click(checkBtn);
+  fireEvent.click(checkBtn);
+  await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/recover",{method:"POST",body:{action:"check"}}));
+  expect(vi.mocked(apiJson).mock.calls.filter(([path])=>path==="/gemini-autopilot/recover")).toHaveLength(1);
+  const retryBtn=await within(panel).findByRole("button",{name:"Retry Scene"});
+  expect(retryBtn).toBeEnabled();
+  fireEvent.click(retryBtn);
+  await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/recover",{method:"POST",body:{action:"retry_scene",job_id:"e01f77d0-7a21-4aa6-8fe7-fa9581489855"}}));
+ });
+ it("offers Recover Completed Video and Wait & Recheck for discovered video or in-progress turn",async()=>{
+  const withVideo:AutopilotData={
+   ...base,
+   recovery_status:{
+    needs_recovery:true,
+    state:"video_available",
+    job_id:"existing",
+    project_title:"The Loading Bar Fights Back",
+    scene_order:1,
+    scene_count:3,
+    outcome_summary:"A completed video for this scene is available and can be recovered into your project without regenerating.",
+    can_check_and_recover:true,
+    can_retry_scene:false,
+    can_recover_video:true,
+    can_wait_and_recheck:false,
+    can_edit_prompt:false,
+    can_confirm_uncertain:false,
+   },
+   scheduler:{...base.scheduler,provider_block_reason:"result_recovery_pending",queue:[item]},
+  };
+  const client=mount(withVideo);
+  const panel=await screen.findByRole("region",{name:"Scene recovery"});
+  fireEvent.click(within(panel).getByRole("button",{name:"Recover Completed Video"}));
+  await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/recover",{method:"POST",body:{action:"recover_video"}}));
+  client.setQueryData(["geminiAutopilot"],{...withVideo,recovery_status:{...withVideo.recovery_status!,state:"in_progress",can_recover_video:false,can_wait_and_recheck:true,failure_reason:"Gemini is still processing this video request."}});
+  const waitBtn=await within(panel).findByRole("button",{name:"Wait & Recheck"});
+  fireEvent.click(waitBtn);
+  await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/recover",{method:"POST",body:{action:"recheck"}}));
+ });
+ it("guides the owner through uncertain submission confirmation and prompt editing on repeated failure",async()=>{
+  const uncertain:AutopilotData={
+   ...base,
+   recovery_status:{
+    needs_recovery:true,
+    state:"uncertain_confirmation_required",
+    job_id:"existing",
+    run_id:"uncertain-run-1",
+    project_title:"The Loading Bar Fights Back",
+    scene_order:2,
+    scene_count:3,
+    current_prompt:"Original camera pan across the loading bar.",
+    outcome_summary:"Studio could not verify whether Gemini created a video because the original conversation is no longer visible.",
+    can_check_and_recover:true,
+    can_retry_scene:false,
+    can_recover_video:false,
+    can_wait_and_recheck:true,
+    can_edit_prompt:false,
+    can_confirm_uncertain:true,
+   },
+   scheduler:{...base.scheduler,provider_block_reason:"reconciliation_required",queue:[item]},
+  };
+  const client=mount(uncertain);
+  const panel=await screen.findByRole("region",{name:"Scene recovery"});
+  const confirmBtn=within(panel).getByRole("button",{name:"Confirm No Video & Unlock Retry"});
+  expect(confirmBtn).toBeDisabled();
+  fireEvent.change(within(panel).getByLabelText("What did you observe in the Gemini browser window?"),{target:{value:"Checked Gemini chat; no video was generated."}});
+  fireEvent.click(within(panel).getByRole("checkbox"));
+  expect(confirmBtn).toBeEnabled();
+  fireEvent.click(confirmBtn);
+  await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/recover",{method:"POST",body:{action:"confirm_uncertain",job_id:"existing",run_id:"uncertain-run-1",confirmed:true,note:"Checked Gemini chat; no video was generated."}}));
+  client.setQueryData(["geminiAutopilot"],{...uncertain,recovery_status:{...uncertain.recovery_status!,state:"prompt_edit_recommended",can_confirm_uncertain:false,can_edit_prompt:true,can_retry_scene:true}});
+  const promptBox=await within(panel).findByLabelText("Revise scene prompt before retrying");
+  fireEvent.change(promptBox,{target:{value:"Updated cinematic tracking shot of the glowing loading bar."}});
+  fireEvent.click(within(panel).getByRole("button",{name:"Save Prompt & Retry Scene"}));
+  await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/recover",{method:"POST",body:{action:"edit_prompt",job_id:"existing",scene_order:2,prompt:"Updated cinematic tracking shot of the glowing loading bar."}}));
+ });
 });
+
