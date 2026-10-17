@@ -7,6 +7,7 @@ import { bangkokTime } from "../lib/autopilotTime";
 import { runningTime, generationSettingsForNewProject, validateGenerationSettings, type QuotaTiming, type VideoSettings, type GenerationSettings } from "../features/settings/contracts";
 import { GenerationSettingsFields } from "./GenerationSettingsFields";
 import { primary } from "./videoProduct";
+import { RecoveryPromptEditor } from "./RecoveryPromptEditor";
 
 type Item = {external_recoveries?:{status:string;provider_submissions:number;application_window_started_at?:string}[];diagnostic?:FailureDetail;next_retry_at?:string;job_id:string;title:string;status:string;scene_count:number;accepted_count:number;started:boolean;paused:boolean;failure?:string;scene_seconds:number;runs:{scene_order:number;status:string}[]};
 type Observation = {id:string;at:string;status:string;video_tool_enabled:boolean;reset_observed:boolean;usage:{fresh:boolean;current_percent?:number;weekly_percent?:number;reset_display?:string;weekly_reset_display?:string}};
@@ -20,7 +21,7 @@ export function GeminiAutopilotPage(){
  const reviewRef=useRef<HTMLElement>(null);
  const query=useQuery({queryKey:["geminiAutopilot"],queryFn:()=>apiJson<AutopilotData>("/gemini-autopilot"),refetchInterval:3000});
  const [generationOverride,setGeneration]=useState<GenerationSettings>();
- const [form,setForm]=useState(false),[title,setTitle]=useState(""),[idea,setIdea]=useState(""),[sceneOverride,setScenes]=useState<number>(),[aspectOverride,setAspect]=useState<string>(),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[review,setReview]=useState(false),[confirmedObservation,setConfirmedObservation]=useState<string>(),[ownerResetNote,setOwnerResetNote]=useState(""),[editingPrompt,setEditingPrompt]=useState(false),[promptDraft,setPromptDraft]=useState(""),[uncertainConfirmed,setUncertainConfirmed]=useState(false),[uncertainNote,setUncertainNote]=useState("");
+ const [form,setForm]=useState(false),[title,setTitle]=useState(""),[idea,setIdea]=useState(""),[sceneOverride,setScenes]=useState<number>(),[aspectOverride,setAspect]=useState<string>(),[busy,setBusy]=useState(false),[error,setError]=useState(""),[notice,setNotice]=useState(""),[review,setReview]=useState(false),[confirmedObservation,setConfirmedObservation]=useState<string>(),[ownerResetNote,setOwnerResetNote]=useState(""),[editingPrompt,setEditingPrompt]=useState(false),[uncertainConfirmed,setUncertainConfirmed]=useState(false),[uncertainNote,setUncertainNote]=useState("");
  async function control(path:string,body?:unknown){if(busy)return;setBusy(true);setError("");setNotice("");try{await apiJson(path,{method:"POST",body});await query.refetch();return true;}catch(e){setError(e instanceof Error?e.message:"Could not update queue");return false;}finally{setBusy(false);}}
  function showReview(){setReview(true);reviewRef.current?.scrollIntoView?.({block:"start"});reviewRef.current?.focus({preventScroll:true});}
  async function check(){if(await control("/gemini-autopilot/check")){showReview();setConfirmedObservation(undefined);setNotice("Gemini check complete. Review the result below; generation has not started.");}}
@@ -36,7 +37,6 @@ export function GeminiAutopilotPage(){
  const ownerNoteRemaining=Math.max(0,15-ownerResetNote.trim().length);
  const held=Boolean(s?.recovery_only||s?.provider_block_reason==="external_submission_accounting");
  const showSceneRecovery=Boolean(!held&&(r?.needs_recovery||s?.provider_block_reason==="reconciliation_required"||s?.provider_block_reason==="result_recovery_pending"||r?.state==="resolved_ready_to_retry"||r?.state==="prompt_edit_recommended"));
- useEffect(()=>{if(r?.current_prompt&&!editingPrompt)setPromptDraft(r.current_prompt);},[r?.current_prompt,editingPrompt]);
  useEffect(()=>{if(review){reviewRef.current?.scrollIntoView?.({block:"start"});reviewRef.current?.focus({preventScroll:true});}},[review,held]);
  const nextEligibility=data?.quota_timing?.effective_at??s?.next_eligible_at;
  const waiting=Boolean(nextEligibility&&Date.parse(nextEligibility)>Date.parse(data?.server_now??""));
@@ -70,18 +70,12 @@ export function GeminiAutopilotPage(){
     {r?.can_recover_video&&<button disabled={busy||!data.available} className={primary} onClick={()=>void runRecovery({action:"recover_video"},"Completed video recovered into your project without regenerating.")}>Recover Completed Video</button>}
     {r?.can_wait_and_recheck&&<button disabled={busy||!data.available} className={secondary} onClick={()=>void runRecovery({action:"recheck"},"Rechecked Gemini request status without spending credits.")}>Wait & Recheck</button>}
     {r?.can_retry_scene&&<button disabled={busy||!data.available} className={r.state==="resolved_ready_to_retry"?primary:secondary} onClick={()=>void runRecovery({action:"retry_scene",job_id:r.job_id},"Scene marked ready for retry.")}>Retry Scene</button>}
-    {r?.can_edit_prompt&&!editingPrompt&&r.state!=="prompt_edit_recommended"&&<button disabled={busy||!data.available} className={secondary} onClick={()=>{setPromptDraft(r.current_prompt??"");setEditingPrompt(true);}}>Edit Scene Prompt</button>}
+    {r?.can_edit_prompt&&!editingPrompt&&r.state!=="prompt_edit_recommended"&&<button disabled={busy||!data.available} className={secondary} onClick={()=>setEditingPrompt(true)}>Edit Scene Prompt</button>}
    </div>
   </div>
   {r?.failure_reason&&<p className="text-sm text-slate-800"><span className="font-semibold">Reason:</span> {r.failure_reason}</p>}
   <p className="text-sm text-slate-700"><span className="font-semibold">Outcome:</span> {r?.outcome_summary??"Inspect the previous request first without spending video credits."}</p>
-  {(editingPrompt||r?.state==="prompt_edit_recommended")&&<div className="space-y-3 rounded-xl border border-amber-200 bg-white p-4">
-   <label className="block text-sm font-medium text-slate-800">Revise scene prompt before retrying<textarea className="mt-2 block w-full rounded-lg border p-3 text-sm" rows={3} value={promptDraft} onChange={e=>setPromptDraft(e.target.value)} placeholder="Describe the camera motion and scene action for Gemini"/></label>
-   <div className="flex flex-wrap gap-2">
-    <button disabled={busy||promptDraft.trim().length<5} className={primary} onClick={()=>void runRecovery({action:"edit_prompt",job_id:r?.job_id,scene_order:r?.scene_order,prompt:promptDraft.trim()},"Scene prompt updated and ready for retry.")}>Save Prompt & Retry Scene</button>
-    {editingPrompt&&<button disabled={busy} className={secondary} onClick={()=>setEditingPrompt(false)}>Cancel</button>}
-   </div>
-  </div>}
+  {(editingPrompt||r?.state==="prompt_edit_recommended")&&<RecoveryPromptEditor key={editingPrompt ? "editing" : r?.current_prompt} initialPrompt={r?.current_prompt??""} busy={busy} onSave={prompt=>void runRecovery({action:"edit_prompt",job_id:r?.job_id,scene_order:r?.scene_order,prompt},"Scene prompt updated and ready for retry.")} onCancel={editingPrompt?()=>setEditingPrompt(false):undefined}/>}
   {r?.can_confirm_uncertain&&<div className="space-y-3 rounded-xl border border-amber-200 bg-white p-4">
    <p className="text-sm font-medium text-slate-900">Guided resolution for uncertain submission</p>
    <label className="block text-sm text-slate-700">What did you observe in the Gemini browser window?<textarea className="mt-2 block w-full rounded-lg border p-3 text-sm" rows={2} value={uncertainNote} onChange={e=>setUncertainNote(e.target.value)} placeholder="Example: Checked Gemini chat; only an error reply appeared and no video was generated."/></label>

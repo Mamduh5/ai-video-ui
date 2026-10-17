@@ -1,5 +1,7 @@
 # API Integration
 
+> Historical slideshow v1 planning reference. Retained for its original contracts and implementation evidence; proposed routes, deferred features and placeholder files below do not describe the current scene-video application. See [current frontend and library contract](project-library.md) and the [README](../README.md) for current entry points.
+
 ## Environment
 
 Frontend local development should use:

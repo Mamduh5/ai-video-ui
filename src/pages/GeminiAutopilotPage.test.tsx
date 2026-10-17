@@ -224,5 +224,23 @@ describe("Gemini Studio",()=>{
   fireEvent.click(within(panel).getByRole("button",{name:"Save Prompt & Retry Scene"}));
   await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/recover",{method:"POST",body:{action:"edit_prompt",job_id:"existing",scene_order:2,prompt:"Updated cinematic tracking shot of the glowing loading bar."}}));
  });
+ it("refreshes recommended saved prompts while preserving an explicit edit until Cancel",async()=>{
+  const recovery:AutopilotData={...base,recovery_status:{needs_recovery:true,state:"prompt_edit_recommended",job_id:"existing",scene_order:2,current_prompt:"Original saved camera movement.",can_check_and_recover:true,can_retry_scene:true,can_recover_video:false,can_wait_and_recheck:true,can_edit_prompt:true,can_confirm_uncertain:false},scheduler:{...base.scheduler,provider_block_reason:"reconciliation_required",queue:[item]}};
+  const client=mount(recovery);
+  const prompt=await screen.findByLabelText("Revise scene prompt before retrying");
+  expect(prompt).toHaveValue("Original saved camera movement.");
+  const updated={...recovery,recovery_status:{...recovery.recovery_status!,current_prompt:"Updated saved camera movement."}};
+  client.setQueryData(["geminiAutopilot"],updated);
+  await waitFor(()=>expect(screen.getByLabelText("Revise scene prompt before retrying")).toHaveValue("Updated saved camera movement."));
+  client.setQueryData(["geminiAutopilot"],{...updated,recovery_status:{...updated.recovery_status,state:"resolved_ready_to_retry"}});
+  fireEvent.click(await screen.findByRole("button",{name:"Edit Scene Prompt"}));
+  fireEvent.change(screen.getByLabelText("Revise scene prompt before retrying"),{target:{value:"Unsaved owner edit must survive polling."}});
+  client.setQueryData(["geminiAutopilot"],{...updated,recovery_status:{...updated.recovery_status,current_prompt:"Latest saved camera movement."}});
+  await waitFor(()=>expect(screen.getByLabelText("Revise scene prompt before retrying")).toHaveValue("Unsaved owner edit must survive polling."));
+  fireEvent.click(screen.getByRole("button",{name:"Cancel"}));
+  await waitFor(()=>expect(screen.getByLabelText("Revise scene prompt before retrying")).toHaveValue("Latest saved camera movement."));
+  expect(vi.mocked(apiJson).mock.calls.some(([,options])=>options?.method==="POST")).toBe(false);
+ });
+
 });
 

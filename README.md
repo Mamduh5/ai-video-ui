@@ -15,7 +15,9 @@ Opening or reloading a project reads persisted state. It does not authorize gene
 
 Validation: `npm run typecheck`, `npm run lint`, `npm run test:run`, `npm run build`, and `git diff --check`. Unit tests use mocked APIs, with no real Flow or Zen calls. Vitest uses four workers to bound local jsdom resource pressure.
 
-R8 is uncommitted and awaiting completion of the fresh real acceptance. See the backend's `docs/scene-video-revival-r8.md` for checkpoint, audit and live evidence.
+Current architecture, documentation classification, and the additive typed library API are documented in [Frontend and project library contract](docs/project-library.md). The Projects page continues to use the compatible offset list until the separately scoped redesign.
+
+R8 acceptance is recorded in the sibling backend's `docs/scene-video-revival-r8.md` (section 20). Earlier milestone notes below preserve the original checkpoint context and are not current worktree or acceptance status.
 
 ---
 
@@ -111,7 +113,9 @@ Frontend v1 should let an internal or solo operator create, poll, inspect, previ
 
 Real image and TTS quality depends on later backend provider integration. The first backend path includes fake/static local-dev generation and real FFmpeg slideshow rendering, but no real image provider and no real TTS provider are assumed by this frontend.
 
-## Docs Index
+## Historical slideshow v1 docs index
+
+These original scope and planning documents are retained as historical references. Current scene-video contracts are in [Frontend and project library contract](docs/project-library.md).
 
 - [Product Scope](docs/product-scope.md)
 - [UX Flow](docs/ux-flow.md)
@@ -125,7 +129,7 @@ Real image and TTS quality depends on later backend provider integration. The fi
 - [Testing Plan](docs/testing-plan.md)
 
 
-## R8.2 opening image review (uncommitted)
+## Historical R8.2 opening image review checkpoint
 
 Standard Video reads the backend's opt-in opening-keyframe setting. The first
 scene shows Preparing opening image, then the saved image and expected entry
@@ -135,8 +139,8 @@ Provider selection and old run history stay in Advanced / Diagnostics.
 Reloading resumes the stored review without submitting again. Approval does
 not accept the video or start it; the separate video action uses the approved
 PNG, and scene review compares Approved opening against Generated opening.
-Later scenes keep the accepted R7 ending-frame handoff. The original R8 fresh
-two-scene creative acceptance is still required before this milestone is accepted.
+Later scenes keep the accepted R7 ending-frame handoff. At this initial checkpoint, the original R8 fresh
+two-scene creative acceptance was still required; the backend R8 report records the subsequent acceptance.
 # R13 Colab storyboard planning
 
 New Video supports an opt-in Colab Qwen planner for supervised Flow. The project
