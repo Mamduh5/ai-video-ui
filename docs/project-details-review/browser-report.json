@@ -1,0 +1,192 @@
+{
+  "generated_at": "2026-10-17T18:43:47.438Z",
+  "base_url": "http://127.0.0.1:5177",
+  "fixture_api_origin": "http://127.0.0.1:18080",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "fixture_media": "Finite 8-second H.264 MP4 fixtures generated offline from an illustrative canvas. No provider footage or live creative review.",
+  "checks": [
+    {
+      "name": "supervised review: stage, horizontal timeline and immediate decision inspector",
+      "result": "PASS",
+      "elapsed_ms": 2243
+    },
+    {
+      "name": "scene selection changes stage and keeps the global next action discoverable",
+      "result": "PASS",
+      "elapsed_ms": 695
+    },
+    {
+      "name": "incomplete drawer choice survives explicit refetch and automatic polling",
+      "result": "PASS",
+      "elapsed_ms": 2854
+    },
+    {
+      "name": "completion expands applicable drawers once and preserves later manual closure",
+      "result": "PASS",
+      "elapsed_ms": 527
+    },
+    {
+      "name": "completed project defaults to final video with native playback, markers and expanded drawers",
+      "result": "PASS",
+      "elapsed_ms": 1673
+    },
+    {
+      "name": "client navigation to another incomplete project resets drawer defaults",
+      "result": "PASS",
+      "elapsed_ms": 423
+    },
+    {
+      "name": "archived final: storage opens with restoration and no unusable video or slowdown control",
+      "result": "PASS",
+      "elapsed_ms": 1627
+    },
+    {
+      "name": "partial archive restores missing scenes while final playback and whole-final export remain available",
+      "result": "PASS",
+      "elapsed_ms": 2155
+    },
+    {
+      "name": "gemini-queued: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 1372
+    },
+    {
+      "name": "gemini-generating: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 1385
+    },
+    {
+      "name": "gemini-waiting: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 1465
+    },
+    {
+      "name": "gemini-completed: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 2171
+    },
+    {
+      "name": "gemini-recovery: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 1572
+    },
+    {
+      "name": "flow-unattended: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 1925
+    },
+    {
+      "name": "flow-unattended-queued: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 2093
+    },
+    {
+      "name": "flow-unattended-completed: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 1841
+    },
+    {
+      "name": "flow-paused: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 1857
+    },
+    {
+      "name": "storyboard: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 2280
+    },
+    {
+      "name": "opening-image: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 2151
+    },
+    {
+      "name": "missing-artifacts: truthful workflow, next action and responsive stage",
+      "result": "PASS",
+      "elapsed_ms": 2330
+    },
+    {
+      "name": "media mismatch prioritizes conformance decisions without accepting the scene",
+      "result": "PASS",
+      "elapsed_ms": 2575
+    },
+    {
+      "name": "continuity handoff exposes selected terminal frame and explicit continuation",
+      "result": "PASS",
+      "elapsed_ms": 2721
+    },
+    {
+      "name": "390px review: touch selection and keyboard drawers fit without page overflow",
+      "result": "PASS",
+      "elapsed_ms": 3025
+    },
+    {
+      "name": "390px portrait media keeps native ratio and completed controls accessible",
+      "result": "PASS",
+      "elapsed_ms": 2667
+    },
+    {
+      "name": "390px archived media exposes restoration without overflow",
+      "result": "PASS",
+      "elapsed_ms": 2174
+    },
+    {
+      "name": "library breadcrumb retains search, filters, sort and view context",
+      "result": "PASS",
+      "elapsed_ms": 2464
+    },
+    {
+      "name": "loading and API failure remain explicit",
+      "result": "PASS",
+      "elapsed_ms": 6338
+    },
+    {
+      "name": "no live requests, mutations, unexpected endpoints or uncaught browser errors",
+      "result": "PASS",
+      "elapsed_ms": 7
+    }
+  ],
+  "screenshots": [
+    "desktop-flow-review.png",
+    "desktop-flow-review-full.png",
+    "desktop-flow-selection.png",
+    "desktop-completed.png",
+    "desktop-completed-full.png",
+    "desktop-archived.png",
+    "desktop-archived-full.png",
+    "desktop-partial-archive-scene.png",
+    "desktop-partial-archive-final.png",
+    "desktop-gemini-queued.png",
+    "desktop-gemini-generating.png",
+    "desktop-gemini-waiting.png",
+    "desktop-gemini-completed.png",
+    "desktop-gemini-recovery.png",
+    "desktop-flow-unattended.png",
+    "desktop-flow-unattended-queued.png",
+    "desktop-flow-unattended-completed.png",
+    "desktop-flow-paused.png",
+    "desktop-storyboard.png",
+    "desktop-opening-image.png",
+    "desktop-missing-artifacts.png",
+    "desktop-media-mismatch.png",
+    "desktop-continuity-handoff.png",
+    "mobile-flow-review-viewport.png",
+    "mobile-flow-review.png",
+    "mobile-completed-portrait.png",
+    "mobile-archived.png",
+    "desktop-loading.png",
+    "desktop-load-error.png"
+  ],
+  "safety_violations": [],
+  "browser_errors": [],
+  "mutation_requests": []
+}

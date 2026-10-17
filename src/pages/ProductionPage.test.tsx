@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { SceneVideoPage } from "./SceneVideoPage";
@@ -19,11 +20,19 @@ function mount() { const client = new QueryClient({ defaultOptions: { queries: {
 it("reloads the persisted current scene without any provider/review/decision mutation", async () => {
   const calls: { url: string; method?: string }[] = [];
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => { calls.push({ url, method: init?.method }); return new Response(JSON.stringify(url.includes("readiness") ? { status: "ready" } : snapshot), { headers: { "Content-Type": "application/json" } }); }));
-  const first = mount(); expect(await screen.findByText("1 / 3 scenes accepted")).toBeInTheDocument(); expect(screen.getByRole("region", { name: "Production overview" })).toHaveTextContent("Current scene: 2");
-  first.unmount(); mount(); expect(await screen.findByText("1 / 3 scenes accepted")).toBeInTheDocument();
-  const waiting = screen.getByRole("heading", { name: "Scene 03" }).closest("section")!;
+  const first = mount();
+  expect(await screen.findByText("1 / 3 scenes approved")).toBeInTheDocument();
+  expect(screen.getByLabelText("Scene 2 video")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Select scene 2" })).toHaveAttribute("aria-pressed", "true");
+  first.unmount(); mount();
+  expect(await screen.findByText("1 / 3 scenes approved")).toBeInTheDocument();
+  expect(screen.getByLabelText("Scene 2 video")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Select scene 3" }));
+  const waiting = within(screen.getByLabelText("Action inspector")).getByRole("heading", { name: "Scene 03" }).closest("section")!;
   expect(within(waiting).getByRole("button", { name: "Generate in Flow" })).toBeDisabled();
   expect(within(waiting).getByLabelText("Import generated MP4")).toBeInTheDocument();
+  await userEvent.click(screen.getByText("Advanced / Diagnostics", { exact: true }));
+  expect(screen.getByRole("region", { name: "Production overview" })).toHaveTextContent("Current scene: 2");
   await waitFor(() => expect(calls.length).toBeGreaterThan(1)); expect(calls.every(call => !call.method || call.method === "GET")).toBe(true);
 });
 

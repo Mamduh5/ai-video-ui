@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { apiJson } from "../lib/apiClient";
 import { primary } from "./videoProduct";
+import { ProjectDrawer } from "./ProjectDrawer";
+import { useProjectDrawer } from "./useProjectDrawer";
+import { useProjectStorage, type ArchiveRecord } from "./useProjectStorage";
 
 import { StorageSettingsForm } from "../features/settings/StorageSettingsForm";
 import { retentionPolicies as policies, type StorageSettings as Settings } from "../features/settings/contracts";
@@ -29,12 +32,29 @@ export function StoragePage(){
  </div>;
 }
 
-type ArchiveRecord={state:string;error?:string;bytes_removed?:number;manifest?:{verified:boolean};artifacts:{role:string;local_object_key:string;size:number;verified:boolean;local_removed:boolean;intermediate?:boolean;drive_file_id?:string}[]};
+
 const stateLabels:Record<string,string>={not_requested:"Local files",queued:"Archive queued",uploading:"Uploading to Google Drive",verifying:"Verifying archive",verified:"Archive verified",cleanup_pending:"Cleanup queued",archived:"Archived to Google Drive",failed:"Archive failed",restore_queued:"Restore queued",restoring:"Restoring local media",restored:"Local + Drive",restore_failed:"Restore failed"};
-export function ProjectStorage({id,onChanged}:{id:string;onChanged:()=>void}){
- const q=useQuery({queryKey:["projectStorage",id],queryFn:()=>apiJson<ArchiveRecord>(`/storage/projects/${encodeURIComponent(id)}`),refetchInterval:3000});
+
+type ProjectStorageProps={id:string;completed?:boolean;onChanged:()=>void;query?:UseQueryResult<ArchiveRecord,Error>};
+export function ProjectStorage({query,...props}:ProjectStorageProps){
+ return query?<ProjectStoragePanel {...props} query={query}/>:<QueriedProjectStorage {...props}/>;
+}
+function QueriedProjectStorage(props:Omit<ProjectStorageProps,"query">){
+ const query=useProjectStorage(props.id);
+ return <ProjectStoragePanel {...props} query={query}/>;
+}
+function ProjectStoragePanel({id,completed=false,onChanged,query:q}:Omit<ProjectStorageProps,"query">&{query:UseQueryResult<ArchiveRecord,Error>}){
+ const {open,setOpen}=useProjectDrawer(id,completed);
  const [busy,setBusy]=useState(false),[error,setError]=useState(""),[policy,setPolicy]=useState("intermediates");
  async function action(action:string){setBusy(true);setError("");try{await apiJson(`/storage/projects/${encodeURIComponent(id)}/${action}`,{method:"POST",body:action==="cleanup"?{policy}:undefined});await q.refetch();onChanged();}catch(e){setError(e instanceof Error?e.message:"Storage action failed");}finally{setBusy(false);}}
  const r=q.data?.artifacts?q.data:undefined;const working=r&&["queued","uploading","verifying","verified","cleanup_pending","restore_queued","restoring"].includes(r.state);const missing=r?.artifacts.some(a=>a.local_removed);const verified=r?.artifacts.filter(a=>a.verified).length??0;
- return <section className="space-y-3 rounded-xl border bg-white p-6" aria-label="Project storage"><h3 className="text-xl font-semibold">Storage</h3>{q.isError&&<p role="alert">{q.error.message}</p>}{error&&<p role="alert">{error}</p>}{r&&<><p role="status">{stateLabels[r.state]??r.state}</p>{r.error&&<p role="alert">{r.error}</p>}{working&&<p>{verified} / {r.artifacts.length} artifacts verified</p>}{["not_requested","failed"].includes(r.state)&&<button disabled={busy} className={primary} onClick={()=>void action("archive")}>{r.state==="failed"?"Retry Archive":"Archive Now"}</button>}{(missing||r.state==="restore_failed")&&<button disabled={busy||working} className={primary} onClick={()=>void action("restore")}>Restore &amp; Watch</button>}<ul className="space-y-1">{r.artifacts.map(a=><li key={a.local_object_key}>{a.role.replaceAll("_"," ")} · {a.verified?"Drive verified":"Not archived"} · {a.local_removed?"Local copy removed":"Local"}</li>)}</ul><p>{space(r.bytes_removed??0)} removed through managed cleanup</p>{r.manifest?.verified&&!working&&<details><summary className="cursor-pointer">Local cleanup</summary><label className="mt-3 block">Remove only verified media<select className="ml-3 rounded border p-2" value={policy} onChange={e=>setPolicy(e.target.value)}>{Object.entries(policies).map(([v,label])=><option key={v} value={v}>{label}</option>)}</select></label><p className="mt-3">{space(r.artifacts.filter(a=>!a.local_removed&&a.verified&&(policy==="cloud_only"||(policy==="restorable_media"&&a.role!=="final_video")||(policy==="intermediates"&&a.intermediate))).reduce((n,a)=>n+a.size,0))} known local media eligible. Each remote copy is reverified before removal.</p><button disabled={busy} className="mt-3 rounded border p-3" onClick={()=>void action("cleanup")}>Apply verified cleanup</button></details>}<details><summary>Diagnostics</summary><pre className="overflow-auto text-xs">{JSON.stringify(r,null,2)}</pre></details></>}</section>;
+ return <ProjectDrawer title="Storage" label="Project storage" open={open} onOpenChange={setOpen}>
+  {q.isLoading&&<p role="status">Loading project storage…</p>}{q.isError&&<p role="alert">{q.error.message}</p>}{error&&<p role="alert">{error}</p>}
+  {r&&<><p role="status">{stateLabels[r.state]??r.state}</p>{r.error&&<p role="alert">{r.error}</p>}{working&&<p>{verified} / {r.artifacts.length} artifacts verified</p>}
+  {["not_requested","failed"].includes(r.state)&&<button disabled={busy} className={primary} onClick={()=>void action("archive")}>{r.state==="failed"?"Retry Archive":"Archive Now"}</button>}
+  {(missing||r.state==="restore_failed")&&<><p>{r.artifacts.some(a=>a.role==="final_video"&&a.local_removed)?"Restore local media before watching archived video or creating a slow version.":r.artifacts.some(a=>a.role==="scene_clip"&&a.local_removed)?"Source scenes are archived. The local final video remains available. Restore source media to preview or export individual scenes.":"Some archived artifacts have no local copy. Restore them before opening those artifacts."}</p><button disabled={busy||working} className={primary} onClick={()=>void action("restore")}>Restore &amp; Watch</button></>}
+  <ul className="space-y-1">{r.artifacts.map(a=><li key={a.local_object_key}>{a.role.replaceAll("_"," ")} · {a.verified?"Drive verified":"Not archived"} · {a.local_removed?"Local copy removed":"Local"}</li>)}</ul><p>{space(r.bytes_removed??0)} removed through managed cleanup</p>
+  {r.manifest?.verified&&!working&&<details><summary className="cursor-pointer">Local cleanup</summary><label className="mt-3 block">Remove only verified media<select className="ml-3 rounded border p-2" value={policy} onChange={e=>setPolicy(e.target.value)}>{Object.entries(policies).map(([v,label])=><option key={v} value={v}>{label}</option>)}</select></label><p className="mt-3">{space(r.artifacts.filter(a=>!a.local_removed&&a.verified&&(policy==="cloud_only"||(policy==="restorable_media"&&a.role!=="final_video")||(policy==="intermediates"&&a.intermediate))).reduce((n,a)=>n+a.size,0))} known local media eligible. Each remote copy is reverified before removal.</p><button disabled={busy} className="mt-3 rounded border p-3" onClick={()=>void action("cleanup")}>Apply verified cleanup</button></details>}
+  <details><summary>Diagnostics</summary><pre className="overflow-auto text-xs">{JSON.stringify(r,null,2)}</pre></details></>}
+ </ProjectDrawer>;
 }
