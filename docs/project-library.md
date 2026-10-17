@@ -8,6 +8,7 @@ Current operational reference for the library API and Projects UI on 2026-10-17.
 - `src/lib/apiClient.ts` owns API URL construction, HTTP parsing, typed errors, and fetch injection for offline tests.
 - `src/features/projectLibrary/types.ts` owns the new library contract and shared `NextAction` shape. `pages/videoProduct.ts` re-exports that type for existing consumers and retains legacy summary/presentation helpers.
 - `src/features/projectLibrary/api.ts` exposes `getProjectLibrary(query, clientOptions?, signal?)`, a GET-only, cancellable read client. It supplies ProjectsPage through the existing React Query provider and useInfiniteQuery.
+- `src/features/slideshowJobs` retains contracts, API/artifact/status helpers, React Query polling hooks, and slideshow form/artifact UI for `/create` and `/slideshow-jobs/:jobId`.
 - `SceneVideoPage` still owns legacy/detail workflow composition; production, opening-image, continuity, scene review, conformance, exports, and recovery panels retain their existing contracts.
 - `RecoveryPromptEditor` owns its unsaved draft. The Gemini page keys the automatic recommended form by saved prompt; explicit edits survive polling, and Cancel returns the latest persisted prompt. Opening/editing/refreshing this form does not submit recovery or generation.
 
@@ -50,9 +51,9 @@ The existing lint failure (`react-hooks/set-state-in-effect` in Gemini saved-pro
 
 | Class | References and treatment |
 | --- | --- |
-| Current operational | README opening sections, this contract, source/tests, `r2-test-concurrency.md`, `local-dev.md` validation commands; current source and scripts prevail where older text differs |
-| Historical milestone evidence | `r14-engineering-checkpoint.md`, README R8/R8.2/R13 notes, sibling backend acceptance reports; retained with their original boundaries |
-| Historical slideshow v1 design | `product-scope.md`, `ux-flow.md`, `ui-design.md`, `design-system.md`, `api-integration.md`, `frontend-architecture.md`, `v1-non-goals.md`, `implementation-sequence.md`, `testing-plan.md`, and slideshow feature README; retained, not interpreted as current scene-video restrictions |
+| Current operational | README opening sections, this contract, and source/tests; current source and scripts prevail where older text differs |
+| Historical milestone evidence | `r2-test-concurrency.md`, `r14-engineering-checkpoint.md`, README R8/R8.2/R13 notes, sibling backend acceptance reports; retained with their original boundaries |
+| Historical slideshow v1 design | `product-scope.md` (including consolidated V1 Non-Goals), `ux-flow.md`, `ui-design.md`, `design-system.md`, `api-integration.md`, `frontend-architecture.md`, `implementation-sequence.md`, `local-dev.md` (original manual payload and troubleshooting), and `testing-plan.md`; retained, not interpreted as current scene-video restrictions |
 | Obsolete runtime draft | Unreachable `RecentJobsPage` placeholder and its self-test removed; no supported runtime path depended on them |
 
 ## Validation and rollback

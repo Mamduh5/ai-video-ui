@@ -1,5 +1,7 @@
 # Local Development
 
+> Historical slideshow v1 setup and troubleshooting notes. The original scaffolding instructions and API-family restrictions below are not current application requirements. Use the [README](../README.md) for current setup, routes and validation commands; retain the manual slideshow payload and CORS/artifact troubleshooting here as historical references.
+
 ## Prerequisites
 
 The backend must be running before the frontend can create or inspect slideshow video jobs.

@@ -117,14 +117,13 @@ Real image and TTS quality depends on later backend provider integration. The fi
 
 These original scope and planning documents are retained as historical references. Current scene-video contracts are in [Frontend and project library contract](docs/project-library.md).
 
-- [Product Scope](docs/product-scope.md)
+- [Product Scope and V1 Non-Goals](docs/product-scope.md)
 - [UX Flow](docs/ux-flow.md)
 - [UI Design](docs/ui-design.md)
 - [Design System](docs/design-system.md)
 - [API Integration](docs/api-integration.md)
 - [Frontend Architecture](docs/frontend-architecture.md)
 - [Local Development](docs/local-dev.md)
-- [V1 Non-Goals](docs/v1-non-goals.md)
 - [Implementation Sequence](docs/implementation-sequence.md)
 - [Testing Plan](docs/testing-plan.md)
 

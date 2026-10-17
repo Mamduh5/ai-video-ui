@@ -18,7 +18,6 @@ Likely files:
 - `docs/api-integration.md`
 - `docs/frontend-architecture.md`
 - `docs/local-dev.md`
-- `docs/v1-non-goals.md`
 - `docs/implementation-sequence.md`
 - `docs/testing-plan.md`
 

@@ -1,5 +1,7 @@
 # Product Scope
 
+> Historical slideshow v1 scope and non-goals. These original boundaries do not restrict the current scene-video app. See the [current frontend and library contract](project-library.md) and [README](../README.md) for current entry points.
+
 ## Product Name Recommendation
 
 Recommended product label: **Explainer Slideshow Studio**.
@@ -51,21 +53,6 @@ For v1, a slideshow video is an MP4 rendered from a generated presentation-like 
 
 The product is closer to "structured explainer video generation" than to freeform video editing.
 
-## What This Product Is Not
-
-V1 is not:
-
-- A full timeline editor.
-- A slide deck editor.
-- A script editor.
-- A prompt engineering workbench.
-- A provider control panel.
-- A publishing automation tool.
-- A social media account manager.
-- A multi-user workspace.
-- A frontend for legacy character/topic jobs.
-- A frontend for experimental scene video jobs.
-
 ## Backend Assumptions
 
 The frontend assumes:
@@ -95,17 +82,22 @@ V1 is successful when:
 - Failures show the failed step, a friendly message, and optional technical details.
 - The frontend does not depend on non-v1 API families.
 
-## Deferred Scope
+## V1 Non-Goals
 
-Deferred until later:
+The original slideshow v1 intentionally validates create, poll, inspect, preview,
+and download before adding editing, publishing, provider controls or account
+complexity. The following exclusions describe that historical scope, not current
+scene-video restrictions.
 
-- Editing generated scripts, prompts, or slides.
-- Regenerating individual slides.
-- Selecting providers, models, content modes, or browser accounts.
-- Real image/TTS quality controls.
-- Auth, teams, workspaces, roles, and permissions.
-- Billing or credits display.
-- Uploading or publishing to TikTok or other platforms.
-- Managing large multi-project dashboards.
-- True video clip generation beyond slideshow assembly.
-
+- Editing: full, timeline and slide-deck editors; script and prompt editors or a
+  prompt engineering workbench; per-slide editing and regeneration.
+- Provider controls: provider, model, content mode and voice provider selection;
+  browser-provider and browser-account controls; real image/TTS quality controls.
+- Accounts and collaboration: auth, teams, workspaces, roles and permissions;
+  public SaaS onboarding; realtime collaboration.
+- Publishing: upload to TikTok or other social platforms, publishing automation,
+  and social media account management.
+- Other job flows: legacy jobs, scene-video jobs, and true video clips beyond
+  slideshow assembly.
+- Operations: billing or credits display, large multi-project dashboards, and
+  WebSocket progress.
