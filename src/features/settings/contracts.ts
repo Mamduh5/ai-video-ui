@@ -1,7 +1,7 @@
-export type GenerationSettings = { version: "generation_settings.v1"; mode: "standard" | "dense_performance" | "fast_performance"; performance_tempo: 1 | 1.5 | 2 | 2.5; fast_version?: "fast_performance.v1" | "fast_performance.v2"; dialogue_language?: string };
+export type GenerationSettings = { version: "generation_settings.v1"; mode: "standard" | "dense_performance" | "fast_performance"; performance_tempo: 1 | 1.5 | 2 | 2.5; fast_version?: "fast_performance.v1" | "fast_performance.v2" | "fast_performance.v3"; dialogue_language?: string };
 // Apply only at new-project/default-settings boundaries; historical decoding stays Standard.
 export function generationSettingsForNewProject(value?: GenerationSettings): GenerationSettings {
- if (value?.mode === "fast_performance" && !value.fast_version) return { ...value, fast_version: "fast_performance.v2" };
+ if (value?.mode === "fast_performance" && !value.fast_version) return { ...value, fast_version: "fast_performance.v3" };
  return value?.mode ? value : { ...value, version: "generation_settings.v1", mode: "dense_performance", performance_tempo: 2 };
 }
 // Historical records without an explicit mode retain Standard when displayed or revised.
@@ -17,7 +17,7 @@ export function validateGenerationSettings(value?: GenerationSettings): string {
  if (!value) return "";
  if (value.version !== "generation_settings.v1" || !["standard", "dense_performance", "fast_performance"].includes(value.mode)) return "Choose a supported generation mode.";
  if (value.mode === "standard" ? value.performance_tempo !== 1 : ![1.5, 2, 2.5].includes(value.performance_tempo)) return "Choose a supported requested performance tempo.";
- if (value.fast_version && (value.mode !== "fast_performance" || !["fast_performance.v1", "fast_performance.v2"].includes(value.fast_version))) return "Choose a supported Fast performance version.";
+ if (value.fast_version && (value.mode !== "fast_performance" || !["fast_performance.v1", "fast_performance.v2", "fast_performance.v3"].includes(value.fast_version))) return "Choose a supported Fast performance version.";
  if (value.dialogue_language && value.dialogue_language.length > 80) return "Dialogue language must be 80 characters or fewer.";
  return "";
 }

@@ -22,7 +22,7 @@ it("describes v2 progression as requested and retains the original historical Fa
   expect(JSON.stringify(historical)).toBe(before);
 });
 
-it("keeps v1 copy historical and explicitly selects v2 through the existing mode control", () => {
+it("keeps v1 copy historical and explicitly selects v3 through the existing mode control", () => {
   const onChange = vi.fn();
   const view = render(<GenerationSettingsFields value={historical} onChange={onChange} sourceSeconds={8}/>);
   expect(screen.getByText(/Dense storytelling with deliberately accelerated speech/)).toBeVisible();
@@ -30,12 +30,12 @@ it("keeps v1 copy historical and explicitly selects v2 through the existing mode
   expect(screen.getByText(/Accelerated delivery that progresses farther into the story within the same clip/)).toBeVisible();
   expect(screen.getAllByRole("option").map(option => option.getAttribute("value"))).toEqual(["dense_performance", "fast_performance", "standard", "1.5", "2", "2.5"]);
   fireEvent.change(screen.getByLabelText("Generation mode"), { target: { value: "fast_performance" } });
-  expect(onChange).toHaveBeenLastCalledWith({ ...historical, fast_version: "fast_performance.v2" });
+  expect(onChange).toHaveBeenLastCalledWith({ ...historical, fast_version: "fast_performance.v3" });
   fireEvent.change(screen.getByLabelText("Generation mode"), { target: { value: "dense_performance" } });
   expect(onChange).toHaveBeenLastCalledWith({ version: "generation_settings.v1", mode: "dense_performance", performance_tempo: 2, dialogue_language: "Thai" });
 });
 
-it.each([undefined, "fast_performance.v1", "fast_performance.v2"] as const)("replans historical Fast %s with an explicit compatibility version while preserving source history", async fast_version => {
+it.each([undefined, "fast_performance.v1", "fast_performance.v2", "fast_performance.v3"] as const)("replans historical Fast %s with an explicit compatibility version while preserving source history", async fast_version => {
   const saved = { ...historical, ...(fast_version ? { fast_version } : {}) };
   const job = { title: "Existing Fast", topic: "Father confronts his son, learns why the money was needed, and hands over the keys.", scene_seconds: 8, generation_settings: saved, scenes: [{ generation_request: { duration_seconds: 8 } }] };
   const before = JSON.stringify(job);
