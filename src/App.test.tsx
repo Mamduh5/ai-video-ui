@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 import { App } from "./App";
 
@@ -13,7 +13,7 @@ describe("App", () => {
       screen.getByRole("link", { name: /projects/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /^new video$/i }),
+      within(screen.getByRole("navigation", { name: "Main navigation" })).getByRole("link", { name: /^new video$/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", {name:/^settings$/i})).toHaveAttribute("href","/settings");
   });

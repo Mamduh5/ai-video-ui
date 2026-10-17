@@ -1,3 +1,4 @@
+import { libraryHref } from "../../features/projectLibrary/presentation";
 import { StorageWarning } from "../../pages/StoragePage";
 import { useLayoutEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
@@ -15,7 +16,9 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 export function AppLayout() {
   const location = useLocation();
-  useLayoutEffect(() => { window.scrollTo({ top: 0, left: 0 }); }, [location.pathname]);
+  useLayoutEffect(() => {
+    if (location.pathname !== "/" && location.pathname !== "/videos") window.scrollTo({ top: 0, left: 0 });
+  }, [location.pathname]);
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
@@ -29,8 +32,8 @@ export function AppLayout() {
             </h1>
 
           </div>
-          <nav aria-label="Main navigation" className="flex flex-wrap gap-2">
-            <NavLink className={navLinkClass} to="/">
+          <nav aria-label="Main navigation" className="flex gap-2 overflow-x-auto pb-1 lg:flex-wrap lg:overflow-visible lg:pb-0 [&>a]:shrink-0 [&>details]:shrink-0">
+            <NavLink className={navLinkClass} to={libraryHref()} end>
               Projects
             </NavLink>
             <NavLink className={navLinkClass} to="/videos/new">
@@ -44,7 +47,7 @@ export function AppLayout() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-6 py-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <StorageWarning/>
         <Outlet />
       </main>
