@@ -15,7 +15,7 @@ Opening or reloading a project reads persisted state. It does not authorize gene
 
 Validation: `npm run typecheck`, `npm run lint`, `npm run test:run`, `npm run build`, and `git diff --check`. Unit tests use mocked APIs, with no real Flow or Zen calls. Vitest uses four workers to bound local jsdom resource pressure.
 
-Current architecture, documentation classification, and the additive typed library API are documented in [Frontend and project library contract](docs/project-library.md). The Projects page continues to use the compatible offset list until the separately scoped redesign.
+Current architecture, documentation classification, and the additive typed library API are documented in [Frontend and project library contract](docs/project-library.md). The Projects page uses the read-only cursor library API with server-side search, provider/status/pause filters, sorting, and compact list/grid views. See [Projects Library V1](docs/projects-library-v1.md) for navigation behavior and verification.
 
 R8 acceptance is recorded in the sibling backend's `docs/scene-video-revival-r8.md` (section 20). Earlier milestone notes below preserve the original checkpoint context and are not current worktree or acceptance status.
 

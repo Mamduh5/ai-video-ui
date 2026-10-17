@@ -1,13 +1,13 @@
 # Frontend and project library contract
 
-Current operational reference for the pre-redesign cleanup on 2026-10-17. No page layout, routes, provider controls, or production workflow have been redesigned.
+Current operational reference for the library API and Projects UI on 2026-10-17. The Projects library now uses the additive read-only API. Existing routes, provider controls, and production/recovery workflows remain supported. See [Projects Library V1](projects-library-v1.md).
 
 ## Current application boundaries
 
 - `src/app/router.tsx` owns routes. `/` and `/videos` render `ProjectsPage`; `/videos/new` and `/scene-jobs/create` render `NewVideoPage` through its compatibility re-export; `/scene-jobs/:jobId` renders `SceneVideoPage`. Slideshow creation/detail remain supported under `/create` and `/slideshow-jobs/:jobId`.
 - `src/lib/apiClient.ts` owns API URL construction, HTTP parsing, typed errors, and fetch injection for offline tests.
 - `src/features/projectLibrary/types.ts` owns the new library contract and shared `NextAction` shape. `pages/videoProduct.ts` re-exports that type for existing consumers and retains legacy summary/presentation helpers.
-- `src/features/projectLibrary/api.ts` exposes `getProjectLibrary(query, clientOptions?, signal?)`, a GET-only, cancellable read client. It is intentionally not wired into the existing Projects page in this task.
+- `src/features/projectLibrary/api.ts` exposes `getProjectLibrary(query, clientOptions?, signal?)`, a GET-only, cancellable read client. It supplies ProjectsPage through the existing React Query provider and useInfiniteQuery.
 - `SceneVideoPage` still owns legacy/detail workflow composition; production, opening-image, continuity, scene review, conformance, exports, and recovery panels retain their existing contracts.
 - `RecoveryPromptEditor` owns its unsaved draft. The Gemini page keys the automatic recommended form by saved prompt; explicit edits survive polling, and Cancel returns the latest persisted prompt. Opening/editing/refreshing this form does not submit recovery or generation.
 
@@ -15,7 +15,7 @@ The scene detail page (about 52 KB before cleanup) and Gemini page (about 30 KB)
 
 ## Additive library API
 
-`GET /scene-video-library` returns `api_version: "scene-video-library.v1"`. The existing `GET /scene-video-jobs` offset API and all project detail, creation and mutation APIs remain in use and unchanged. The current Projects page keeps its legacy list and polling behavior.
+`GET /scene-video-library` returns `api_version: "scene-video-library.v1"`. The existing `GET /scene-video-jobs` offset API and all project detail, creation and mutation APIs remain in use and unchanged. The Projects page now uses this endpoint; non-library legacy consumers retain their existing API.
 
 | Query | Contract |
 | --- | --- |
@@ -36,7 +36,7 @@ Each project contains stable `id`, `title`, persisted `status`, separate `displa
 
 Malformed input returns HTTP 400 `{ error, code: "invalid_library_query", field }`; unavailable reads return HTTP 503 `{ error, code: "library_unavailable" }`. The common client preserves `code`, status, message and the full structured error in `ApiClientError.details`. The library client performs no retries or mutations.
 
-For the Projects redesign, reset the cursor when filters or sort change; use the returned `next_cursor` and stop at `has_more: false`. Keep cursor history if Previous is needed. Treat nullable historical data explicitly; use detail APIs for production/recovery controls. The backend contract document explains snapshot and concurrent-update behavior.
+The Projects UI keys cached cursor chains by search, filters, sort, and page size, uses the returned `next_cursor`, and stops at `has_more: false`. Explicit Refresh discards continuation pages and starts from page one. Treat nullable historical data explicitly; use detail APIs for production/recovery controls. The backend contract document explains snapshot and concurrent-update behavior.
 
 ## Verified cleanup and preservation
 
@@ -63,4 +63,4 @@ Final validation: all 42 Vitest files / 291 tests passed (91.24s); typecheck, li
 
 Run `npm run test:run`, `npm run typecheck`, `npm run lint`, `npm run build`, and `git diff --check` after changes. Library tests cover literal query encoding, combined filters including paused=false, opaque continuation metadata, historical nulls, server-owned states/actions, empty results, structured validation/unavailable errors, GET-only behavior, and cancellation. Gemini regressions cover saved-prompt refresh, explicit draft preservation and Cancel without a POST.
 
-There is no frontend schema or data migration. Roll back the frontend cleanup commit to restore the prior files and import boundaries; because the new endpoint client is additive and not connected to the current page, existing UI operation does not depend on it. Backend index/read-model rollback is documented separately in the backend report.
+There is no frontend schema or data migration. Roll back the frontend cleanup commit to restore the prior files and import boundaries; the cleanup introduced an additive API client. The subsequent Projects UI depends on the new endpoint; roll back that UI change first if the additive endpoint is unavailable. Backend index/read-model rollback is documented separately in the backend report.

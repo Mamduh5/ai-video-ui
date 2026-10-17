@@ -1,0 +1,186 @@
+{
+  "dataset_sizes": [
+    512,
+    7,
+    0
+  ],
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 1000
+    },
+    {
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "checks": [
+    {
+      "name": "large fixture: initial loading, bounded first page, no detail fanout",
+      "result": "PASS",
+      "elapsed_ms": 2178
+    },
+    {
+      "name": "large fixture: explicit cursor loading appends 40 with no automatic sweep",
+      "result": "PASS",
+      "elapsed_ms": 1141
+    },
+    {
+      "name": "detail route and browser Back preserve loaded projects and scroll",
+      "result": "PASS",
+      "elapsed_ms": 1155
+    },
+    {
+      "name": "debounced server search locates a project beyond the loaded 120",
+      "result": "PASS",
+      "elapsed_ms": 1679
+    },
+    {
+      "name": "combined provider, machine status and pause filters reset the cursor",
+      "result": "PASS",
+      "elapsed_ms": 2367
+    },
+    {
+      "name": "supported sorts reach the server and preserve query binding",
+      "result": "PASS",
+      "elapsed_ms": 1359
+    },
+    {
+      "name": "history retains filters, sort and grid preference after opening a project",
+      "result": "PASS",
+      "elapsed_ms": 1129
+    },
+    {
+      "name": "no-results state and clear filters recover the library",
+      "result": "PASS",
+      "elapsed_ms": 782
+    },
+    {
+      "name": "explicit refresh failure is visible and retry recovers",
+      "result": "PASS",
+      "elapsed_ms": 989
+    },
+    {
+      "name": "small fixture ends naturally and includes archived, missing and legacy media",
+      "result": "PASS",
+      "elapsed_ms": 663
+    },
+    {
+      "name": "empty library gives a clear creation entry point",
+      "result": "PASS",
+      "elapsed_ms": 658
+    },
+    {
+      "name": "390px touch layout supports search, filters and view controls without overflow",
+      "result": "PASS",
+      "elapsed_ms": 2623
+    },
+    {
+      "name": "fixture boundary has no unexpected endpoints, mutations or browser exceptions",
+      "result": "PASS",
+      "elapsed_ms": 0
+    }
+  ],
+  "completed_requests": [
+    [
+      {
+        "sort": "recent",
+        "limit": "40"
+      },
+      {
+        "sort": "recent",
+        "limit": "40",
+        "cursor": "opaque-library-position-2-NlbnQiXQ"
+      },
+      {
+        "sort": "recent",
+        "limit": "40",
+        "cursor": "opaque-library-position-3-NlbnQiXQ"
+      },
+      {
+        "q": "Remote Lighthouse",
+        "sort": "recent",
+        "limit": "40"
+      },
+      {
+        "provider": "gemini_web",
+        "sort": "recent",
+        "limit": "40"
+      },
+      {
+        "status": "completed",
+        "provider": "gemini_web",
+        "sort": "recent",
+        "limit": "40"
+      },
+      {
+        "status": "completed",
+        "provider": "gemini_web",
+        "paused": "false",
+        "sort": "recent",
+        "limit": "40"
+      },
+      {
+        "status": "completed",
+        "provider": "gemini_web",
+        "paused": "false",
+        "sort": "name",
+        "limit": "40"
+      },
+      {
+        "status": "completed",
+        "provider": "gemini_web",
+        "paused": "false",
+        "sort": "created",
+        "limit": "40"
+      },
+      {
+        "q": "not-a-fixture-project-xyz",
+        "status": "completed",
+        "provider": "gemini_web",
+        "paused": "false",
+        "sort": "created",
+        "limit": "40"
+      },
+      {
+        "sort": "recent",
+        "limit": "40"
+      },
+      {
+        "sort": "recent",
+        "limit": "40"
+      }
+    ],
+    [
+      {
+        "sort": "recent",
+        "limit": "40"
+      }
+    ],
+    [
+      {
+        "sort": "recent",
+        "limit": "40"
+      }
+    ],
+    [
+      {
+        "sort": "recent",
+        "limit": "40"
+      },
+      {
+        "q": "Remote Lighthouse",
+        "sort": "recent",
+        "limit": "40"
+      },
+      {
+        "provider": "flow_web",
+        "sort": "recent",
+        "limit": "40"
+      }
+    ]
+  ],
+  "safety_violations": [],
+  "browser_errors": [],
+  "note": "Synthetic fixtures; all API traffic intercepted. No real API, provider, database or media state used."
+}
