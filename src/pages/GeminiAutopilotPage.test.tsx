@@ -12,6 +12,15 @@ const observation={id:"fresh-check",at:base.server_now,status:"connected",video_
 const held:AutopilotData={...base,accounting_review:{can_release:false,reason:"A new allowance window has not been observed yet."},scheduler:{...base.scheduler,enabled:false,recovery_only:true,provider_block_reason:"external_submission_accounting",submissions_this_window:3,window_started_at:"2026-10-14T12:23:00Z",provider_observation:observation,queue:[item]}};
 function mount(data=base){vi.mocked(apiJson).mockResolvedValue(data);const client=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={client}><MemoryRouter><GeminiAutopilotPage/></MemoryRouter></QueryClientProvider>);return client}
 describe("Gemini Studio",()=>{
+ it("offers Force Retry for an existing failed project despite stale video availability and cooldowns",async()=>{
+  mount({...base,force_retry_status:{existing:{job_id:"existing",scene_order:2,available:true}},scheduler:{...base.scheduler,enabled:false,next_eligible_at:"2026-10-18T10:00:00Z",provider_block_reason:"video_tool_disabled",provider_observation:{...observation,at:"2026-10-14T10:00:00Z",status:"video_tool_disabled",video_tool_enabled:false},queue:[{...item,status:"needs_attention",accepted_count:1}]}});
+  const button=await screen.findByRole("button",{name:"Force Retry Now"});
+  expect(button).toBeEnabled();
+  fireEvent.click(button);
+  expect(screen.getByRole("dialog",{name:"Confirm Force Retry"})).toBeVisible();
+  expect(vi.mocked(apiJson).mock.calls.some(([,options])=>options?.method==="POST")).toBe(false);
+ });
+
  it("offers Resume after a fresh check clears a page error without redoing accounting or starting production",async()=>{
   const failed={...base,scheduler:{...base.scheduler,provider_block_reason:"ui_unavailable",provider_observation:observation,queue:[{...item,diagnostic:{code:"ui_unavailable",stage:"readiness",source:"Gemini",message:"The Gemini interface could not be matched safely."}}]}};
   mount(failed);await screen.findByText("Connected");let checked=false;
