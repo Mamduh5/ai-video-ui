@@ -11,6 +11,8 @@ Routes:
 
 Run the backend's `./scripts/run-standard-video.ps1` for the accepted local Flow configuration, then `npm run dev` here. Use `VITE_API_BASE_URL=http://localhost:8080` for the local API. The creation form shows the actual configured scene length; unsupported automation is reported as unavailable.
 
+The backend now manages enabled dedicated Flow/Gemini browser startup and read-only reconnection. **Settings → Dedicated browser sessions** shows launch, connection, login and failure diagnostics. Colab remains manual. See the backend's [browser management and reference acceptance report](../ai-video-pipeline/docs/dedicated-browser-management.md) for exact launch commands and the currently blocked Tesla live test.
+
 Opening or reloading a project reads persisted state. It does not authorize generation, acceptance, media overrides or review retries. Manual Flow import, prompts and full histories remain under **Advanced / Diagnostics**. Final videos retain playback, scene markers and a friendly **Download Video** filename using the original artifact.
 
 Validation: `npm run typecheck`, `npm run lint`, `npm run test:run`, `npm run build`, and `git diff --check`. Unit tests use mocked APIs, with no real Flow or Zen calls. Vitest uses four workers to bound local jsdom resource pressure.
@@ -166,3 +168,7 @@ no Flow/Gemini video generation was submitted.
 The operator guide and acceptance records are in the sibling backend repository
 at `docs/r13-colab-qwen-planner.md` and `docs/acceptance/r13/`. Separate local
 backend/frontend commits close R13. No push or R14 implementation is included.
+
+## Reference Image V1
+
+New Video includes an optional Gemini **Subject Reference** uploader, gated by verified browser capability. The current role is unverified, so the form explains the limitation and disables image selection while preserving text-only creation. Gemini dashboard queue creation opens the same New Video form. See [Reference Image V1](docs/reference-image-v1.md) for formats, controls, atomic persistence, retry behavior and validation limits.

@@ -364,3 +364,7 @@ The create form should preserve entered values. The job detail page should keep 
 
 The frontend must not store, request, display, or transmit provider API keys. Provider configuration remains backend-owned. V1 should not expose provider selection or provider account controls.
 
+
+## Gemini Subject Reference V1
+
+Capability is read from `GET /gemini-autopilot/subject-reference-capability`; missing or unverified roles disable selection. No-image creation retains JSON `POST /gemini-autopilot/queue`. Image creation uses multipart `request` JSON plus `subject_reference` image and an `Idempotency-Key`, with durable project association before planning eligibility. See [Reference Image V1](reference-image-v1.md). A local persistence response is not provider attachment acknowledgement.
