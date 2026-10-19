@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { apiJson } from "../lib/apiClient";
 import { SettingsPage } from "./SettingsPage";
@@ -63,12 +63,19 @@ it("parses exact GiB and rejects negatives, overflow, empty and rounded byte inp
  expect(gibToBytes("1.5")).toBe(1610612736); for (const value of ["", "-1", "hello", "Infinity", "1.1", "1000000000000000000"]) expect(() => gibToBytes(value)).toThrow(); expect(validateStorage(storageSettings)).toBe(""); expect(validateStorage({ ...storageSettings, reserve_bytes: 3 * 1024 ** 3 })).toMatch(/no larger/);
 });
 
+function showGeminiCreationFlow() {
+ return show(<Routes><Route path="/" element={<GeminiAutopilotPage/>}/><Route path="/videos/new" element={<CreateSceneVideoPage/>}/><Route path="/scene-jobs/:id" element={<Link to="/videos/new?workflow=gemini_web">Create another video</Link>}/></Routes>);
+}
+function mockGeminiCreationReads() {
+ const data={available:true,server_now:"2026-10-19T04:00:00Z",video_defaults:defaults,runtime_notice:"fixture",capabilities:{aspect_ratios:["16:9"],native_seconds:10,max_scenes:8},scheduler:{enabled:false,configured_submission_cap:4,submissions_this_window:0,queue:[]}};
+ vi.mocked(apiJson).mockImplementation(async(path,init)=>init?.method ? {job_id:"fixture"} : path === "/scene-video-options" ? options : data);
+}
 it("each new Gemini queue form reloads saved defaults after a per-video override", async () => {
- const data = { available: true, server_now: "2026-10-12T04:00:00Z", video_defaults: defaults, runtime_notice: "fixture", capabilities: { aspect_ratios: ["16:9"], native_seconds: 10, max_scenes: 8 }, scheduler: { enabled: true, configured_submission_cap: 4, submissions_this_window: 0, queue: [] } };
- vi.mocked(apiJson).mockImplementation(async (_path,init) => init?.method ? {job_id:"fixture"} : data);
- show(<GeminiAutopilotPage />);const queueButton=await screen.findByRole("button",{name:"+ Queue Video"});await waitFor(()=>expect(queueButton).toBeEnabled());fireEvent.click(queueButton);expect(screen.getByLabelText("Scenes")).toHaveValue(3);
- fireEvent.change(screen.getByLabelText("Scenes"),{target:{value:"5"}});fireEvent.change(screen.getByLabelText("Idea"),{target:{value:"Fixture idea"}});fireEvent.click(screen.getByRole("button",{name:"Add to Queue"}));
- await waitFor(()=>expect(screen.queryByRole("button",{name:"Add to Queue"})).not.toBeInTheDocument());await waitFor(()=>expect(screen.getByRole("button",{name:"+ Queue Video"})).toBeEnabled());fireEvent.click(screen.getByRole("button",{name:"+ Queue Video"}));expect(screen.getByLabelText("Scenes")).toHaveValue(3);expect(defaults.gemini.scene_count).toBe(3);
+ mockGeminiCreationReads(); showGeminiCreationFlow();
+ fireEvent.click(await screen.findByRole("link",{name:"+ Queue Video"}));
+ const scenes=await screen.findByLabelText("Scene count"); await waitFor(()=>expect(scenes).toHaveValue("3"));
+ fireEvent.change(scenes,{target:{value:"5"}});fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"Fixture idea"}});fireEvent.click(screen.getByRole("button",{name:"Add to Gemini Queue"}));
+ fireEvent.click(await screen.findByRole("link",{name:"Create another video"}));await waitFor(()=>expect(screen.getByLabelText("Scene count")).toHaveValue("3"));expect(defaults.gemini.scene_count).toBe(3);
 });
 
 
@@ -96,16 +103,13 @@ it("preserves explicit provider defaults and saved Dense tempo when saving unrel
 });
 
 it("Gemini new ideas persist Dense by default and reset an explicit Fast override for the next idea", async () => {
- const data={available:true,server_now:"2026-10-17T04:00:00Z",video_defaults:defaults,runtime_notice:"fixture",capabilities:{aspect_ratios:["16:9"],native_seconds:10,max_scenes:8},scheduler:{enabled:false,configured_submission_cap:4,submissions_this_window:0,queue:[]}};
- vi.mocked(apiJson).mockImplementation(async(_path,init)=>init?.method ? {job_id:"fixture"} : data); show(<GeminiAutopilotPage/>);
- const queue=await screen.findByRole("button",{name:"+ Queue Video"}); await waitFor(()=>expect(queue).toBeEnabled()); fireEvent.click(queue);
- expect(screen.getByLabelText("Generation mode")).toHaveValue("dense_performance"); fireEvent.change(screen.getByLabelText("Idea"),{target:{value:"A complete dramatic explanation."}});
- fireEvent.click(screen.getByRole("button",{name:"Add to Queue"})); await screen.findByText("Idea added to your queue.");
+ mockGeminiCreationReads(); showGeminiCreationFlow(); fireEvent.click(await screen.findByRole("link",{name:"+ Queue Video"}));
+ await screen.findByRole("button",{name:"Add to Gemini Queue"}); await waitFor(()=>expect(screen.getByLabelText("Scene count")).toHaveValue("3"));
+ expect(screen.getByLabelText("Generation mode")).toHaveValue("dense_performance");fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"A complete dramatic explanation."}});fireEvent.click(screen.getByRole("button",{name:"Add to Gemini Queue"}));
+ fireEvent.click(await screen.findByRole("link",{name:"Create another video"}));
  expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"dense_performance",performance_tempo:2}})}));
- fireEvent.click(queue); fireEvent.change(screen.getByLabelText("Generation mode"),{target:{value:"fast_performance"}}); fireEvent.change(screen.getByLabelText("Fast creative tempo"),{target:{value:"2.5"}});
- fireEvent.change(screen.getByLabelText("Idea"),{target:{value:"A substantial quick exchange with an immediate consequence."}}); fireEvent.click(screen.getByRole("button",{name:"Add to Queue"}));
- await waitFor(()=>expect(screen.queryByRole("button",{name:"Add to Queue"})).toBeNull());
+ fireEvent.change(screen.getByLabelText("Generation mode"),{target:{value:"fast_performance"}});fireEvent.change(screen.getByLabelText("Fast creative tempo"),{target:{value:"2.5"}});fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"A substantial quick exchange with an immediate consequence."}});fireEvent.click(screen.getByRole("button",{name:"Add to Gemini Queue"}));
+ fireEvent.click(await screen.findByRole("link",{name:"Create another video"}));
  expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:2.5,fast_version:"fast_performance.v3"}})}));
- fireEvent.click(queue); expect(screen.getByLabelText("Generation mode")).toHaveValue("dense_performance"); expect(screen.queryByLabelText("Fast creative tempo")).toBeNull();
- expect(vi.mocked(apiJson).mock.calls.filter(([,init])=>init?.method)).toHaveLength(2);
+ expect(screen.getByLabelText("Generation mode")).toHaveValue("dense_performance");expect(screen.queryByLabelText("Fast creative tempo")).toBeNull();expect(vi.mocked(apiJson).mock.calls.filter(([,init])=>init?.method)).toHaveLength(2);
 });

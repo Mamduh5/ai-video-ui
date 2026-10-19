@@ -80,6 +80,24 @@ export async function apiJson<T>(
   return fetchJsonUrl<T>(url, options, clientOptions);
 }
 
+// Let the browser supply the multipart boundary; preserve the common API error contract.
+export async function apiMultipart<T>(
+  path: string,
+  body: FormData,
+  options: Omit<JsonRequestOptions, "body"> = {},
+  clientOptions: ApiClientOptions = {},
+) {
+  const response = await performFetch(buildApiUrl(path, clientOptions.baseUrl), {
+    method: options.method ?? "POST",
+    headers: { Accept: "application/json", ...options.headers },
+    body,
+    signal: options.signal,
+  }, clientOptions.fetchFn);
+  await throwIfResponseFailed(response);
+  if (response.status === 204) return undefined as T;
+  return parseJsonResponse<T>(response);
+}
+
 export async function fetchJsonUrl<T>(
   url: string,
   options: JsonRequestOptions = {},

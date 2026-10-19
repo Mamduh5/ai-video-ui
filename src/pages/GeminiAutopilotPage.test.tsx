@@ -13,7 +13,7 @@ const held:AutopilotData={...base,accounting_review:{can_release:false,reason:"A
 function mount(data=base){vi.mocked(apiJson).mockResolvedValue(data);const client=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={client}><MemoryRouter><GeminiAutopilotPage/></MemoryRouter></QueryClientProvider>);return client}
 describe("Gemini Studio",()=>{
  it("offers Force Retry for an existing failed project despite stale video availability and cooldowns",async()=>{
-  mount({...base,force_retry_status:{existing:{job_id:"existing",scene_order:2,available:true}},scheduler:{...base.scheduler,enabled:false,next_eligible_at:"2026-10-18T10:00:00Z",provider_block_reason:"video_tool_disabled",provider_observation:{...observation,at:"2026-10-14T10:00:00Z",status:"video_tool_disabled",video_tool_enabled:false},queue:[{...item,status:"needs_attention",accepted_count:1}]}});
+  mount({...base,force_retry_candidates:[{job_id:"existing",title:item.title,status:"needs_attention",project_status:"failed",paused:false,completed_scenes:1,total_scenes:3,next_incomplete_scene:2,retry_status:{job_id:"existing",scene_order:2,available:true}}],force_retry_status:{existing:{job_id:"existing",scene_order:2,available:true}},scheduler:{...base.scheduler,enabled:false,next_eligible_at:"2026-10-18T10:00:00Z",provider_block_reason:"video_tool_disabled",provider_observation:{...observation,at:"2026-10-14T10:00:00Z",status:"video_tool_disabled",video_tool_enabled:false},queue:[{...item,status:"needs_attention",accepted_count:1}]}});
   const button=await screen.findByRole("button",{name:"Force Retry Now"});
   expect(button).toBeEnabled();
   fireEvent.click(button);
@@ -98,7 +98,7 @@ describe("Gemini Studio",()=>{
  it("checks without resuming or releasing when evidence is insufficient",async()=>{mount(held);fireEvent.click(await screen.findByRole("button",{name:"Check Gemini & Resume"}));expect(await screen.findByText(held.accounting_review!.reason)).toBeVisible();expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/check",{method:"POST",body:undefined});expect(screen.queryByRole("button",{name:"Close old window"})).not.toBeInTheDocument();expect(vi.mocked(apiJson).mock.calls.some(([path])=>String(path).includes("/control/resume"))).toBe(false)});
  it("requires explicit confirmation tied to the observed snapshot and keeps Resume separate",async()=>{mount({...held,accounting_review:{can_release:true,reason:"Fresh rollover observed."}});fireEvent.click(await screen.findByRole("button",{name:"Check Gemini & Resume"}));const close=await screen.findByRole("button",{name:"Close old window"});expect(close).toBeDisabled();fireEvent.click(screen.getByRole("checkbox"));expect(close).toBeEnabled();fireEvent.click(close);await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/accounting/release",{method:"POST",body:{observation_id:"fresh-check",owner_confirmed:true}}));expect(vi.mocked(apiJson).mock.calls.some(([path])=>String(path).includes("/control/resume"))).toBe(false)});
  it("offers ordinary Resume after accounting release",async()=>{mount({...base,scheduler:{...base.scheduler,enabled:false,provider_observation:observation}});fireEvent.click(await screen.findByRole("button",{name:"Resume Autopilot"}));await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/control/resume",{method:"POST",body:undefined}))});
- it("queues ideas while held without invoking generation or release",async()=>{mount(held);await screen.findByText("Connected");fireEvent.click(screen.getByRole("button",{name:"+ Queue Video"}));fireEvent.change(screen.getByLabelText("Idea"),{target:{value:"robot waves"}});fireEvent.click(screen.getByRole("button",{name:"Add to Queue"}));await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue",{method:"POST",body:{title:"",idea:"robot waves",scene_count:2,aspect_ratio:"16:9",generation_settings:{version:"generation_settings.v1",mode:"dense_performance",performance_tempo:2}}}));expect(vi.mocked(apiJson).mock.calls.filter(([,options])=>options?.method==="POST")).toHaveLength(1)});
+ it("routes queue creation to the shared New Video form while held",async()=>{mount(held);await screen.findByText("Connected");expect(screen.getByRole("link",{name:"+ Queue Video"})).toHaveAttribute("href","/videos/new?workflow=gemini_web");expect(screen.queryByRole("form",{name:"Queue Video"})).not.toBeInTheDocument();expect(vi.mocked(apiJson).mock.calls.filter(([,options])=>options?.method==="POST")).toHaveLength(0)});
  it("organizes the existing queue using item controls",async()=>{mount({...held,scheduler:{...held.scheduler,queue:[item,{...item,job_id:"second",title:"Second idea"}]}});fireEvent.click(await screen.findByRole("button",{name:"Move Second idea up"}));await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/items/second/up",{method:"POST",body:undefined}))});
  it("keeps accounting, run references and raw state inside closed Advanced Diagnostics",async()=>{mount({...held,scheduler:{...held.scheduler,queue:[{...item,diagnostic:{code:"planner_timeout",stage:"planning",source:"Planner",message:"Planning timed out",diagnostic_reference:"private-run"}}]}});const details=(await screen.findByText("Advanced Diagnostics")).closest("details")!;expect(details).not.toHaveAttribute("open");expect(within(details).getByText(/3 \/ 4 application-counted/)).toBeInTheDocument();expect(within(details).getByText(/Diagnostic reference: private-run/)).toBeInTheDocument();expect(screen.getByLabelText("Autopilot status").textContent).not.toContain("private-run")});
  it("preserves external owner attribution and separates provider counts",async()=>{mount({...held,scheduler:{...held.scheduler,queue:[{...item,status:"completed",external_recoveries:[{status:"completed",provider_submissions:1,application_window_started_at:held.scheduler.window_started_at}]}]}});expect(await screen.findByText("Completed with owner recovery")).toBeInTheDocument();expect(screen.getByText(/4 known provider submissions/)).toBeInTheDocument();expect(screen.queryByText("Completed by Gemini Autopilot")).not.toBeInTheDocument()});
@@ -156,7 +156,7 @@ describe("Gemini Studio",()=>{
   expect(within(panel).getByText(/Swarm War: Flies vs the Titan Ant · Scene 3 of 4 — THE COUNTERATTACK/)).toBeVisible();
   expect(within(panel).getByText(/I seem to be encountering an error/)).toBeVisible();
   expect(panel.textContent).not.toContain("99e2f931-6433-4d6c-8d0e-f41c8024eb70");
-  expect(screen.getByRole("button",{name:"+ Queue Video"})).toBeEnabled();
+  expect(screen.getByRole("link",{name:"+ Queue Video"})).toHaveAttribute("href","/videos/new?workflow=gemini_web");
   const checkBtn=within(panel).getByRole("button",{name:"Check & Recover"});
   fireEvent.click(checkBtn);
   fireEvent.click(checkBtn);
@@ -251,5 +251,36 @@ describe("Gemini Studio",()=>{
   expect(vi.mocked(apiJson).mock.calls.some(([,options])=>options?.method==="POST")).toBe(false);
  });
 
+
+ it("uses only backend retry candidates while preserving the queue and completed history",async()=>{
+  mount({...base,force_retry_candidates:[],scheduler:{...base.scheduler,queue:[{...item,status:"completed",accepted_count:3},{...item,job_id:"stale-queue",title:"Stale queue label",status:"needs_attention",accepted_count:0}]}});
+  const panel=await screen.findByRole("region",{name:"Force retry"});
+  expect(within(panel).getByText("No unfinished Gemini projects need retrying.")).toBeVisible();
+  expect(within(panel).queryByRole("combobox")).not.toBeInTheDocument();
+  expect(screen.getByRole("link",{name:/Stale queue label/})).toBeVisible();
+  expect(screen.getByText("Finished & saved projects (1)")).toBeInTheDocument();
+  expect(screen.getByRole("link",{name:/The Loading Bar Fights Back/})).toBeInTheDocument();
+ });
+ it("shows verified post-submission refusal facts instead of a generic availability explanation",async()=>{
+  const response="I can't make videos of real people in situations like that. Can I help you with something else?";
+  mount({...base,failure_status:{existing:{job_id:"existing",run_id:"private-run",scene_order:1,code:"safety_refusal",stage:"after_submission",message:"Gemini refused this video request.",provider_response:response,request_received:"yes",application_slot_consumed:true,previous_result_recoverable:"no",force_retry_permitted:false,force_retry_blocker:"Resolve the refusal before authorizing a retry.",next_action:"Review Gemini's response and revise the request within its rules."}},scheduler:{...base.scheduler,provider_block_reason:"video_tool_disabled",current_project:"existing",queue:[{...item,status:"needs_attention"}]}});
+  const facts=await screen.findByLabelText("Gemini generation failure");
+  expect(within(facts).getByText("After Gemini submission")).toBeVisible();
+  expect(within(facts).getByText(response)).toBeVisible();
+  expect(within(facts).getByText("Yes \u2014 preserved in submission history")).toBeVisible();
+  expect(within(facts).getByText(/No.*Resolve the refusal/)).toBeVisible();
+  expect(facts.textContent).not.toContain("private-run");
+  expect(screen.getByLabelText("Autopilot status")).toHaveTextContent("Gemini refused this video request.");
+  expect(screen.queryByText(/Gemini has temporarily disabled video creation/)).not.toBeInTheDocument();
+  expect(apiJson).not.toHaveBeenCalledWith("/gemini-autopilot/force-retry",expect.anything());
+ });
+ it("removes old failure facts when a newer server snapshot clears the failure",async()=>{
+  const client=mount({...base,failure_status:{existing:{job_id:"existing",code:"browser_unavailable",stage:"pre_submission",message:"The dedicated browser was disconnected.",request_received:"no",application_slot_consumed:false,previous_result_recoverable:"unknown",force_retry_permitted:false,next_action:"Reconnect the dedicated browser."}},scheduler:{...base.scheduler,queue:[item]}});
+  const facts=await screen.findByLabelText("Gemini generation failure");
+  expect(within(facts).getByText("No \u2014 no generation was submitted")).toBeVisible();
+  expect(within(facts).getByText("Unknown \u2014 check the previous request first")).toBeVisible();
+  client.setQueryData(["geminiAutopilot"],{...base,failure_status:{},scheduler:{...base.scheduler,queue:[item]}});
+  await waitFor(()=>expect(screen.queryByLabelText("Gemini generation failure")).not.toBeInTheDocument());
+ });
 });
 

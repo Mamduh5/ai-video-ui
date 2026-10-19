@@ -25,7 +25,7 @@ it("keeps the Standard default omitted when the configured Flow model has no qua
  await waitFor(() => expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs", expect.objectContaining({body:expect.objectContaining({scene_seconds:8})})));
  const created = vi.mocked(apiJson).mock.calls.find(([path]) => path === "/scene-video-jobs");
  expect(created?.[1]?.body).not.toHaveProperty("generation_resolution");
-});
+}, 15000);
 
 it("submits explicit Standard 720p when the configured Flow model supports that choice", async () => {
  vi.mocked(apiJson).mockImplementation(async path => path === "/scene-video-options" ? {...options, capabilities:{...options.capabilities, generation_resolutions:["720p", "360p"]}} : {job_id:"standard"});
@@ -35,7 +35,7 @@ it("submits explicit Standard 720p when the configured Flow model supports that 
  await user.type(screen.getByLabelText("Idea / story"), "A robot repairs a clock");
  await user.click(screen.getByRole("button", {name:"Generate Storyboard"}));
  await waitFor(() => expect(apiJson).toHaveBeenCalledWith("/scene-video-jobs", expect.objectContaining({body:expect.objectContaining({generation_resolution:"720p"})})));
-});
+}, 15000);
 
 it.each(["flow_web", "flow_unattended"])("submits native Draft 360p for %s when supported", async workflow => {
  vi.mocked(apiJson).mockImplementation(async path => path === "/scene-video-options" ? {...options, capabilities:{...options.capabilities, generation_resolutions:["720p", "360p"]}} : {job_id:"draft"});

@@ -1,6 +1,7 @@
 import {
   ApiClientError,
   apiJson,
+  apiMultipart,
   buildApiUrl,
   fetchBlobUrl,
   fetchJsonUrl,
@@ -49,6 +50,18 @@ describe("apiClient", () => {
         }),
       }),
     );
+  });
+
+  it("sends multipart with its idempotency header and lets the browser set the boundary", async () => {
+    const body = new FormData(); body.append("subject_reference", new File(["image"], "reference.png", { type: "image/png" }));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ job_id: "created" }, { status: 202 }));
+    await expect(apiMultipart("/gemini-autopilot/queue", body, { headers: { "Idempotency-Key": "same-request" } }, { baseUrl: "http://api.test", fetchFn: fetchMock as typeof fetch })).resolves.toEqual({ job_id: "created" });
+    expect(fetchMock).toHaveBeenCalledWith("http://api.test/gemini-autopilot/queue", expect.objectContaining({ method: "POST", body, headers: { Accept: "application/json", "Idempotency-Key": "same-request" } }));
+  });
+
+  it("retains structured errors for rejected image persistence", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: "Image could not be decoded", code: "invalid_subject_reference" }, { status: 400 }));
+    await expect(apiMultipart("/gemini-autopilot/queue", new FormData(), {}, { fetchFn: fetchMock as typeof fetch })).rejects.toMatchObject({ status: 400, category: "validation", message: "Image could not be decoded", code: "invalid_subject_reference" });
   });
 
   it.each([

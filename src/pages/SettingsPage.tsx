@@ -9,6 +9,7 @@ import { field, generationSettingsForNewProject, validateGenerationSettings, quo
 import { GenerationSettingsFields } from "./GenerationSettingsFields";
 import { AutopilotFailure, type FailureDetail } from "./autopilotStatus";
 import type { StorageData } from "./StoragePage";
+import { BrowserSessionsPanel } from "../components/BrowserSessionsPanel";
 
 type GeminiConfig = { version: number; enabled: boolean; configured_submission_cap: number; planning_timeout_seconds: number; planning_max_attempts: number };
 export type GeminiSettingsData = { quota_config?:QuotaConfig; quota_timing?:QuotaTiming; available: boolean; config: GeminiConfig; status: { current_project?: string; current_project_title?: string; active_run?: string; active_scene?: number; submissions_this_window: number; provider_block_reason?: string; next_eligible_at?: string; eligibility_estimated: boolean; provider_reported_reset_at?: string; window_hours: number; storage_block?: FailureDetail; worker_diagnostic?: FailureDetail } };
@@ -33,6 +34,7 @@ export function SettingsPage() {
  const sectionLinks = [ ["general", "Video defaults"], ["gemini", "Gemini Autopilot"], ["storage-settings", "Storage & Drive"], ["system", "Advanced / System"] ];
  return <div className="mx-auto max-w-4xl space-y-6"><header><h2 className="text-3xl font-semibold">Settings</h2><p className="mt-2 text-slate-600">Configure new videos, scheduling and storage protection.</p></header>
   <nav aria-label="Settings sections" className="flex flex-wrap gap-3">{sectionLinks.map(([id, label]) => <a key={id} className="rounded border bg-white px-3 py-2 text-sm" href={`#${id}`}>{label}</a>)}</nav>
+  <BrowserSessionsPanel />
   <div id="general" className="scroll-mt-4">
    {video.isLoading && <p role="status">Loading video defaults...</p>}{video.isError && <p role="alert">{video.error.message}</p>}{options.isError && <p role="alert">{options.error.message}</p>}
    {video.data && <SectionEditor title="General / Video Defaults" saved={video.data} validate={validateVideo} onReload={() => video.refetch({ throwOnError: true })} onSave={async value => { const result = await apiJson<VideoSettings>("/settings/video", { method: "POST", body: { ...value, flow: { ...value.flow, generation_settings: generationSettingsForNewProject(value.flow.generation_settings) }, gemini: { ...value.gemini, generation_settings: generationSettingsForNewProject(value.gemini.generation_settings) } } }); client.setQueryData(["videoSettings"], result); await client.invalidateQueries({ queryKey: ["videoCreationOptions"] }); }}>{(s, edit) => {
