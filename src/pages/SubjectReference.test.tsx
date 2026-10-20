@@ -7,7 +7,7 @@ import { CreateSceneVideoPage } from "./NewVideoPage";
 
 vi.mock("../lib/apiClient", async original => ({ ...await original<typeof import("../lib/apiClient")>(), apiJson: vi.fn(), apiMultipart: vi.fn() }));
 const capability: SubjectReferenceCapability = { supported: true, status: "verified", media_types: ["image/png", "image/jpeg"], max_bytes: 10485760, max_width: 4096, max_height: 4096, max_pixels: 16000000 };
-const options = { standard_available: true, gemini_available: true, scene_seconds: 8, gemini_capabilities: { native_seconds: 10, max_scenes: 8, aspect_ratios: ["16:9"] } };
+const options = { standard_available: true, gemini_available: true, scene_seconds: 8, gemini_capabilities: { native_seconds: 10, max_scenes: 8, aspect_ratios: ["9:16", "16:9"] } };
 const clients: QueryClient[] = [];
 
 function mountFlowModel(model: string, seconds: number, supported: boolean, ingredientDurations: number[], resolutions: string[] = ["720p"]) {
@@ -61,7 +61,7 @@ it("keeps no-image Gemini creation unchanged while an unverified reference role 
  fireEvent.change(screen.getByLabelText("Idea / story"), { target: { value: "A Roadster accelerates" } });
  await waitFor(() => expect(screen.getByRole("button", { name: "Add to Gemini Queue" })).toBeEnabled());
  fireEvent.click(screen.getByRole("button", { name: "Add to Gemini Queue" })); await screen.findByText("Project created");
- expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue", { method: "POST", body: { title: "", idea: "A Roadster accelerates", scene_count: 2, aspect_ratio: "16:9", generation_settings: { version: "generation_settings.v1", mode: "dense_performance", performance_tempo: 2 } } });
+ expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue", { method: "POST", body: { title: "", idea: "A Roadster accelerates", scene_count: 2, aspect_ratio: "9:16", generation_settings: { version: "generation_settings.v1", mode: "dense_performance", performance_tempo: 2 } } });
  expect(apiMultipart).not.toHaveBeenCalled();
 });
 it.each([undefined, {}, { ...capability, max_bytes: 0 }])("fails closed on missing or malformed capability %j", async cap => {

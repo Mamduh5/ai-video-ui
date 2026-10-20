@@ -2,6 +2,12 @@
 
 The current scene-video app opens to **Projects**. Choose **New Video**, describe an idea, review the concise storyboard, and start sequential production. Standard Video defaults to native audio, AI-assisted review and continuity from accepted ending frames. Each scene waits for your creative decision; AI findings are advisory.
 
+## R16 aspect ratios
+
+New Video supports **9:16 — Portrait** and **16:9 — Landscape** in Gemini Autopilot, Flow supervised and Flow Autopilot. Fresh defaults are portrait; existing persisted application defaults need the backend's explicit one-time R16 CAS migration. Settings → Video Defaults saves either ratio for each provider; both Flow workflows share the same Flow default. Workflow switches apply provider defaults until an aspect is deliberately chosen, then keep that choice. The Gemini dashboard's + Queue Video opens this same form. The effective ratio is visible before creation, independently of Flow resolution.
+
+The frontend uses backend Gemini capability options and blocks unsupported selections. R16 changes do not resume a queue or authorize generation. Native Gemini selection is fixture verified; live control selection and portrait generation acceptance remain pending. See the backend `docs/r16-aspect-ratios.md` for safe runtime activation and persisted-default migration.
+
 ## Routes
 
 - `/` or `/videos`: saved projects with titles, thumbnails, progress and next actions.

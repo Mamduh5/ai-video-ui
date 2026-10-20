@@ -15,7 +15,7 @@ const defaults: VideoSettings = { version: 0, preferred_workflow: "flow_web", fl
 const storageSettings = { version: 0, automatic: true, level: "restorable", cleanup: "keep_local", warning_bytes: 5 * 1024 ** 3, critical_bytes: 2 * 1024 ** 3, reserve_bytes: 1024 ** 3 };
 const storage = { settings: storageSettings, local: [], drive_status: "connected", queue_count: 0 };
 const gemini = { available: true, config: { version: 0, enabled: true, configured_submission_cap: 4, planning_timeout_seconds: 480, planning_max_attempts: 3 }, status: { submissions_this_window: 4, provider_block_reason: "reconciliation_required", eligibility_estimated: true, window_hours: 5, next_eligible_at: "2026-10-12T08:02:22Z" } };
-const options = { standard_available: true, gemini_available: true, scene_seconds: 8, video_defaults: defaults, capabilities: { scene_durations: [4, 6, 8, 10], aspect_ratios: ["16:9", "9:16"], min_scene_count: 1, max_scene_count: 8 } };
+const options = { standard_available: true, gemini_available: true, gemini_capabilities:{native_seconds:10,max_scenes:20,aspect_ratios:["9:16","16:9"]}, scene_seconds: 8, video_defaults: defaults, capabilities: { scene_durations: [4, 6, 8, 10], aspect_ratios: ["16:9", "9:16"], min_scene_count: 1, max_scene_count: 8 } };
 function mockReads() { vi.mocked(apiJson).mockImplementation(async (path) => ({ "/settings/video": defaults, "/settings/gemini": gemini, "/storage": storage, "/scene-video-options": options, "/settings/system": { planner_model: "fixture", planner_provider: "Configured planner", planner_configured: true, flow_enabled: true, gemini_browser: "configured; not checked", drive: "connected", mongo: "reachable", minio: "configured; not checked", ffmpeg: "available", download_directory: "fixture/downloads", working_directory: "fixture/work", flow_planning_timeout_seconds: 480, configuration_effect: "Startup changes require restart." } }[path])); }
 function show(node: React.ReactNode) { return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false, throwOnError: false }, mutations: { retry: false } } })}><MemoryRouter>{node}</MemoryRouter></QueryClientProvider>); }
 it("loads all sections, persisted 5/2/1 GiB and calculated floor without mutations or readiness", async () => {
@@ -51,7 +51,7 @@ it("blocks a stale-tab overwrite and explicitly reloads the newer section", asyn
 });
 it("bounds Gemini timeout and keeps provider-native defaults", async () => {
  mockReads(); show(<SettingsPage />); const timeout = await screen.findByLabelText("Planning timeout (seconds)"); fireEvent.change(timeout, { target: { value: "0" } }); expect(screen.getByText("Planning timeout must be 60-1800 seconds.")).toBeVisible();
- fireEvent.change(screen.getByLabelText("Preferred workflow"), { target: { value: "gemini_web" } }); expect(screen.getByLabelText("Default aspect ratio")).toHaveValue("16:9"); expect(within(screen.getByLabelText("Default aspect ratio")).getAllByRole("option")).toHaveLength(1); expect(within(screen.getByLabelText("Default audio")).getAllByRole("option")).toHaveLength(1); expect(screen.getByLabelText("Default scene duration")).toHaveValue("10");
+ fireEvent.change(screen.getByLabelText("Preferred workflow"), { target: { value: "gemini_web" } }); expect(screen.getByLabelText("Default aspect ratio")).toHaveValue("16:9"); expect(within(screen.getByLabelText("Default aspect ratio")).getAllByRole("option")).toHaveLength(2); expect(within(screen.getByLabelText("Default audio")).getAllByRole("option")).toHaveLength(1); expect(screen.getByLabelText("Default scene duration")).toHaveValue("10");
 });
 it("initializes New Video from persisted defaults while allowing a project override", async () => {
  mockReads(); show(<CreateSceneVideoPage />); const scenes = await screen.findByLabelText("Scene count"); await waitFor(() => expect(scenes).toHaveValue("4")); expect(screen.getByLabelText("Aspect ratio")).toHaveValue("9:16"); expect(screen.getByLabelText("Scene length")).toHaveValue("6"); expect(screen.getByLabelText("Audio")).toHaveValue("silent");
@@ -112,4 +112,15 @@ it("Gemini new ideas persist Dense by default and reset an explicit Fast overrid
  fireEvent.click(await screen.findByRole("link",{name:"Create another video"}));
  expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue",expect.objectContaining({body:expect.objectContaining({generation_settings:{version:"generation_settings.v1",mode:"fast_performance",performance_tempo:2.5,fast_version:"fast_performance.v3"}})}));
  expect(screen.getByLabelText("Generation mode")).toHaveValue("dense_performance");expect(screen.queryByLabelText("Fast creative tempo")).toBeNull();expect(vi.mocked(apiJson).mock.calls.filter(([,init])=>init?.method)).toHaveLength(2);
+});
+
+for(const aspect of ["9:16","16:9"])it(`saves and reloads both provider aspect defaults as ${aspect}`,async()=>{
+ mockReads();const original=vi.mocked(apiJson).getMockImplementation()!;let saved:VideoSettings={...defaults,version:8};
+ vi.mocked(apiJson).mockImplementation(async(path,init)=>{if(path==="/settings/video"&&init?.method==="POST"){saved={...init.body as VideoSettings,version:9};return saved}if(path==="/settings/video")return saved;return original(path,init)});
+ const view=show(<SettingsPage/>);const form=await screen.findByRole("form",{name:"General / Video Defaults"});
+ fireEvent.change(screen.getByLabelText("Default aspect ratio"),{target:{value:aspect}});
+ fireEvent.change(screen.getByLabelText("Preferred workflow"),{target:{value:"gemini_web"}});fireEvent.change(screen.getByLabelText("Default aspect ratio"),{target:{value:aspect}});
+ fireEvent.click(within(form).getByRole("button",{name:"Save Changes"}));await screen.findByText("Changes saved.");expect(saved.flow.aspect_ratio).toBe(aspect);expect(saved.gemini.aspect_ratio).toBe(aspect);expect(saved.version).toBe(9);
+ view.unmount();show(<SettingsPage/>);await waitFor(()=>expect(screen.getByLabelText("Default aspect ratio")).toHaveValue(aspect));
+ fireEvent.change(screen.getByLabelText("Preferred workflow"),{target:{value:"flow_web"}});expect(screen.getByLabelText("Default aspect ratio")).toHaveValue(aspect);
 });

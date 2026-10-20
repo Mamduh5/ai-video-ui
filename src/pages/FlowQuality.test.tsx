@@ -9,7 +9,7 @@ import { SceneVideoPage } from "./SceneVideoPage";
 vi.mock("../lib/apiClient", async original => ({ ...await original<typeof import("../lib/apiClient")>(), apiJson: vi.fn() }));
 beforeEach(() => vi.mocked(apiJson).mockReset());
 
-const options = { standard_available: true, gemini_available: true, scene_seconds: 8, capabilities: { aspect_ratios: ["16:9", "9:16"], scene_durations: [4, 6, 8, 10], min_scene_count: 1, max_scene_count: 8 } };
+const options = { standard_available: true, gemini_available: true, gemini_capabilities:{native_seconds:10,max_scenes:20,aspect_ratios:["9:16","16:9"]}, scene_seconds: 8, capabilities: { aspect_ratios: ["16:9", "9:16"], scene_durations: [4, 6, 8, 10], min_scene_count: 1, max_scene_count: 8 } };
 function showCreate() {
  return render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><MemoryRouter initialEntries={["/new"]}><Routes><Route path="/new" element={<CreateSceneVideoPage/>}/><Route path="/scene-jobs/:jobId" element={<p>Created project</p>}/></Routes></MemoryRouter></QueryClientProvider>);
 }
@@ -58,7 +58,7 @@ it("keeps Flow quality out of Gemini creation", async () => {
  expect(screen.queryByLabelText("Generation quality")).not.toBeInTheDocument();
  await user.type(screen.getByLabelText("Idea / story"), "A quiet garden");
  await user.click(screen.getByRole("button", {name:"Add to Gemini Queue"}));
- await waitFor(() => expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue", {method:"POST",body:{title:"",idea:"A quiet garden",scene_count:2,aspect_ratio:"16:9",generation_settings:{version:"generation_settings.v1",mode:"dense_performance",performance_tempo:2}}}));
+ await waitFor(() => expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/queue", {method:"POST",body:{title:"",idea:"A quiet garden",scene_count:2,aspect_ratio:"9:16",generation_settings:{version:"generation_settings.v1",mode:"dense_performance",performance_tempo:2}}}));
 });
 
 it("displays saved draft quality and preserves it when regenerating the storyboard", async () => {
