@@ -1,0 +1,236 @@
+{
+  "synthetic_media": true,
+  "actual_api_handlers": true,
+  "actual_mongo_database": "test_r162_browser_1792644604903",
+  "actual_api_process_restarts": 6,
+  "provider_connections": 0,
+  "checks": [
+    "portrait: original run recovered through application control, MP4 full decode/R3, reload, no duplicate import",
+    "landscape: original run recovered through application control, MP4 full decode/R3, reload, no duplicate import",
+    "portrait: failed automatic recovery, app-only MP4 preview and explicit owner association; API process restart before upload and after import, no duplicate",
+    "landscape: failed automatic recovery, app-only MP4 preview and explicit owner association; API process restart before upload and after import, no duplicate",
+    "Gemini Autopilot provides direct project recovery links",
+    "390px recovery status remains readable without horizontal overflow",
+    "Original runs byte-equivalent through API, one clip each, accounting 4/4 unchanged, queue paused, protected hold retained, zero provider connections"
+  ],
+  "requests": [
+    "/gemini-autopilot/projects/auto-portrait/video-recovery/original-auto-portrait/recover",
+    "/gemini-autopilot/projects/auto-portrait/video-recovery/original-auto-portrait/recover",
+    "/gemini-autopilot/projects/auto-landscape/video-recovery/original-auto-landscape/recover",
+    "/gemini-autopilot/projects/auto-landscape/video-recovery/original-auto-landscape/recover",
+    "/gemini-autopilot/projects/manual-portrait/video-recovery/original-manual-portrait/recover",
+    "/gemini-autopilot/projects/manual-portrait/video-recovery/original-manual-portrait/manual",
+    "/gemini-autopilot/projects/manual-portrait/video-recovery/original-manual-portrait/upload",
+    "/gemini-autopilot/projects/manual-landscape/video-recovery/original-manual-landscape/recover",
+    "/gemini-autopilot/projects/manual-landscape/video-recovery/original-manual-landscape/manual",
+    "/gemini-autopilot/projects/manual-landscape/video-recovery/original-manual-landscape/upload"
+  ],
+  "errors": [],
+  "violations": [],
+  "before": {
+    "attempts": {
+      "auto-landscape": 0,
+      "auto-portrait": 0,
+      "manual-landscape": 0,
+      "manual-portrait": 0
+    },
+    "block": "external_submission_accounting",
+    "enabled": false,
+    "originals": {
+      "auto-landscape": [
+        {
+          "effective_prompt": "Create a landscape video. Visual direction: \nCharacter: \nEnvironment: \n\nMotion: Synthetic fixture auto-landscape\nContinue the established subject and environment when a reference image is attached; the image is a continuity aid. No captions or logos. Native audio: dialogue \"\"; sound effects []; ambience \"\". Follow the audio restrictions in the visual direction.",
+          "id": "original-auto-landscape",
+          "scene_order": 1,
+          "status": "reconciliation_required",
+          "submission_intent": true,
+          "at": "2026-10-22T04:50:09.09Z",
+          "finished_at": "2026-10-22T04:50:09.09Z",
+          "failure": "download_failed",
+          "evidence": {
+            "aspect_ratio": "16:9",
+            "composer_hash": "auto-landscape",
+            "prompt_hash": "synthetic-auto-landscape",
+            "baseline": null,
+            "reference_uploaded": false
+          },
+          "asset": {
+            "id": "auto-landscape"
+          }
+        }
+      ],
+      "auto-portrait": [
+        {
+          "effective_prompt": "Create a portrait video. Visual direction: \nCharacter: \nEnvironment: \n\nMotion: Synthetic fixture auto-portrait\nContinue the established subject and environment when a reference image is attached; the image is a continuity aid. No captions or logos. Native audio: dialogue \"\"; sound effects []; ambience \"\". Follow the audio restrictions in the visual direction.",
+          "id": "original-auto-portrait",
+          "scene_order": 1,
+          "status": "reconciliation_required",
+          "submission_intent": true,
+          "at": "2026-10-22T04:50:09.09Z",
+          "finished_at": "2026-10-22T04:50:09.09Z",
+          "failure": "download_failed",
+          "evidence": {
+            "aspect_ratio": "9:16",
+            "composer_hash": "auto-portrait",
+            "prompt_hash": "synthetic-auto-portrait",
+            "baseline": null,
+            "reference_uploaded": false
+          },
+          "asset": {
+            "id": "auto-portrait"
+          }
+        }
+      ],
+      "manual-landscape": [
+        {
+          "effective_prompt": "Create a landscape video. Visual direction: \nCharacter: \nEnvironment: \n\nMotion: Synthetic fixture manual-landscape\nContinue the established subject and environment when a reference image is attached; the image is a continuity aid. No captions or logos. Native audio: dialogue \"\"; sound effects []; ambience \"\". Follow the audio restrictions in the visual direction.",
+          "id": "original-manual-landscape",
+          "scene_order": 1,
+          "status": "reconciliation_required",
+          "submission_intent": true,
+          "at": "2026-10-22T04:50:09.09Z",
+          "finished_at": "2026-10-22T04:50:09.09Z",
+          "failure": "download_failed",
+          "evidence": {
+            "aspect_ratio": "16:9",
+            "composer_hash": "manual-landscape",
+            "prompt_hash": "synthetic-manual-landscape",
+            "baseline": null,
+            "reference_uploaded": false
+          },
+          "asset": {
+            "id": "manual-landscape"
+          }
+        }
+      ],
+      "manual-portrait": [
+        {
+          "effective_prompt": "Create a portrait video. Visual direction: \nCharacter: \nEnvironment: \n\nMotion: Synthetic fixture manual-portrait\nContinue the established subject and environment when a reference image is attached; the image is a continuity aid. No captions or logos. Native audio: dialogue \"\"; sound effects []; ambience \"\". Follow the audio restrictions in the visual direction.",
+          "id": "original-manual-portrait",
+          "scene_order": 1,
+          "status": "reconciliation_required",
+          "submission_intent": true,
+          "at": "2026-10-22T04:50:09.09Z",
+          "finished_at": "2026-10-22T04:50:09.09Z",
+          "failure": "download_failed",
+          "evidence": {
+            "aspect_ratio": "9:16",
+            "composer_hash": "manual-portrait",
+            "prompt_hash": "synthetic-manual-portrait",
+            "baseline": null,
+            "reference_uploaded": false
+          },
+          "asset": {
+            "id": "manual-portrait"
+          }
+        }
+      ]
+    },
+    "provider_connections": 0,
+    "recovery_only": true,
+    "submissions": 4
+  },
+  "after": {
+    "attempts": {
+      "auto-landscape": 1,
+      "auto-portrait": 1,
+      "manual-landscape": 1,
+      "manual-portrait": 1
+    },
+    "block": "external_submission_accounting",
+    "enabled": false,
+    "originals": {
+      "auto-landscape": [
+        {
+          "effective_prompt": "Create a landscape video. Visual direction: \nCharacter: \nEnvironment: \n\nMotion: Synthetic fixture auto-landscape\nContinue the established subject and environment when a reference image is attached; the image is a continuity aid. No captions or logos. Native audio: dialogue \"\"; sound effects []; ambience \"\". Follow the audio restrictions in the visual direction.",
+          "id": "original-auto-landscape",
+          "scene_order": 1,
+          "status": "reconciliation_required",
+          "submission_intent": true,
+          "at": "2026-10-22T04:50:09.09Z",
+          "finished_at": "2026-10-22T04:50:09.09Z",
+          "failure": "download_failed",
+          "evidence": {
+            "aspect_ratio": "16:9",
+            "composer_hash": "auto-landscape",
+            "prompt_hash": "synthetic-auto-landscape",
+            "baseline": null,
+            "reference_uploaded": false
+          },
+          "asset": {
+            "id": "auto-landscape"
+          }
+        }
+      ],
+      "auto-portrait": [
+        {
+          "effective_prompt": "Create a portrait video. Visual direction: \nCharacter: \nEnvironment: \n\nMotion: Synthetic fixture auto-portrait\nContinue the established subject and environment when a reference image is attached; the image is a continuity aid. No captions or logos. Native audio: dialogue \"\"; sound effects []; ambience \"\". Follow the audio restrictions in the visual direction.",
+          "id": "original-auto-portrait",
+          "scene_order": 1,
+          "status": "reconciliation_required",
+          "submission_intent": true,
+          "at": "2026-10-22T04:50:09.09Z",
+          "finished_at": "2026-10-22T04:50:09.09Z",
+          "failure": "download_failed",
+          "evidence": {
+            "aspect_ratio": "9:16",
+            "composer_hash": "auto-portrait",
+            "prompt_hash": "synthetic-auto-portrait",
+            "baseline": null,
+            "reference_uploaded": false
+          },
+          "asset": {
+            "id": "auto-portrait"
+          }
+        }
+      ],
+      "manual-landscape": [
+        {
+          "effective_prompt": "Create a landscape video. Visual direction: \nCharacter: \nEnvironment: \n\nMotion: Synthetic fixture manual-landscape\nContinue the established subject and environment when a reference image is attached; the image is a continuity aid. No captions or logos. Native audio: dialogue \"\"; sound effects []; ambience \"\". Follow the audio restrictions in the visual direction.",
+          "id": "original-manual-landscape",
+          "scene_order": 1,
+          "status": "reconciliation_required",
+          "submission_intent": true,
+          "at": "2026-10-22T04:50:09.09Z",
+          "finished_at": "2026-10-22T04:50:09.09Z",
+          "failure": "download_failed",
+          "evidence": {
+            "aspect_ratio": "16:9",
+            "composer_hash": "manual-landscape",
+            "prompt_hash": "synthetic-manual-landscape",
+            "baseline": null,
+            "reference_uploaded": false
+          },
+          "asset": {
+            "id": "manual-landscape"
+          }
+        }
+      ],
+      "manual-portrait": [
+        {
+          "effective_prompt": "Create a portrait video. Visual direction: \nCharacter: \nEnvironment: \n\nMotion: Synthetic fixture manual-portrait\nContinue the established subject and environment when a reference image is attached; the image is a continuity aid. No captions or logos. Native audio: dialogue \"\"; sound effects []; ambience \"\". Follow the audio restrictions in the visual direction.",
+          "id": "original-manual-portrait",
+          "scene_order": 1,
+          "status": "reconciliation_required",
+          "submission_intent": true,
+          "at": "2026-10-22T04:50:09.09Z",
+          "finished_at": "2026-10-22T04:50:09.09Z",
+          "failure": "download_failed",
+          "evidence": {
+            "aspect_ratio": "9:16",
+            "composer_hash": "manual-portrait",
+            "prompt_hash": "synthetic-manual-portrait",
+            "baseline": null,
+            "reference_uploaded": false
+          },
+          "asset": {
+            "id": "manual-portrait"
+          }
+        }
+      ]
+    },
+    "provider_connections": 0,
+    "recovery_only": true,
+    "submissions": 4
+  }
+}

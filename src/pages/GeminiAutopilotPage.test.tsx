@@ -189,8 +189,8 @@ describe("Gemini Studio",()=>{
   };
   const client=mount(withVideo);
   const panel=await screen.findByRole("region",{name:"Scene recovery"});
-  fireEvent.click(within(panel).getByRole("button",{name:"Recover Completed Video"}));
-  await waitFor(()=>expect(apiJson).toHaveBeenCalledWith("/gemini-autopilot/recover",{method:"POST",body:{action:"recover_video"}}));
+  expect(within(panel).getByRole("link",{name:"Recover Existing Video"})).toHaveAttribute("href", "/scene-jobs/existing#video-recovery");
+  expect(vi.mocked(apiJson).mock.calls.some(([, options])=>options?.method==="POST")).toBe(false);
   client.setQueryData(["geminiAutopilot"],{...withVideo,recovery_status:{...withVideo.recovery_status!,state:"in_progress",can_recover_video:false,can_wait_and_recheck:true,failure_reason:"Gemini is still processing this video request."}});
   const waitBtn=await within(panel).findByRole("button",{name:"Wait & Recheck"});
   fireEvent.click(waitBtn);

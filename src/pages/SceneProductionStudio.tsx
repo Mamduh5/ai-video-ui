@@ -1,3 +1,4 @@
+import { ExistingVideoRecoveryPanel } from "./ExistingVideoRecoveryPanel";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiJson, buildApiUrl } from "../lib/apiClient";
@@ -67,6 +68,7 @@ export function SceneProductionStudio({ job, onChanged }: { job: SceneJob; onCha
   }
   return <div className="project-studio">
     <ProjectDetailHeader job={job} onRefresh={onChanged} controls={!automatic && job.production?.started && !completed && !job.production.paused ? <button type="button" disabled={busy} onClick={() => void control("pause")}>Pause</button> : undefined}/>
+    {job.autopilot?.provider === "gemini_web" && <ExistingVideoRecoveryPanel jobId={job.id} title={job.title} onChanged={onChanged}/>}
     <div className="studio-workspace">
       <div className="studio-primary"><StudioStage job={mediaJob} selection={selection} opening={openingAction} sourceRemoved={typeof selection === "number" && removedScenes.has(selection)}/><SceneTimelineStrip job={mediaJob} selection={selection} onSelect={select}/></div>
       <aside className="studio-inspector" aria-label="Action inspector">
@@ -108,7 +110,7 @@ export function SceneProductionStudio({ job, onChanged }: { job: SceneJob; onCha
 
 function AutomaticProductionStatus({ job }: { job: SceneJob }) {
   const unattended = job.production?.mode === "flow_unattended";
-  return <div className="studio-automatic"><p>{unattended ? "Technical acceptance is automatic. Rendered-frame findings and quality warnings appear below when recorded." : `${job.scenes?.some(scene => scene.attempts?.some(attempt => attempt.external_recovery)) ? "Includes owner-submitted recovery accepted after R3 validation." : job.status === "completed" ? "Accepted by Gemini Autopilot after R3 validation." : "Gemini Autopilot performs technical validation automatically."} Creative quality has not been human reviewed.`}</p>{job.diagnostic && <AutopilotFailure detail={job.diagnostic}/>} {job.blockers?.map((detail, index) => <AutopilotFailure key={`${detail.code}-${index}`} detail={detail}/>)}{job.next_automatic_at && <p>Next automatic action: {job.eligibility_estimated ? "ESTIMATE: " : ""}{bangkokTime(job.next_automatic_at)}</p>}<Link to={unattended ? "/flow-autopilot" : "/gemini-autopilot"}>{unattended ? "View Flow queue" : "View Gemini queue"}</Link></div>;
+  return <div className="studio-automatic"><p>{unattended ? "Technical acceptance is automatic. Rendered-frame findings and quality warnings appear below when recorded." : `${job.scenes?.some(scene => scene.attempts?.some(attempt => attempt.existing_video_recovery)) ? "Includes existing-video recovery accepted after R3 validation; see recovery provenance above." : job.scenes?.some(scene => scene.attempts?.some(attempt => attempt.external_recovery)) ? "Includes owner-submitted recovery accepted after R3 validation." : job.status === "completed" ? "Accepted by Gemini Autopilot after R3 validation." : "Gemini Autopilot performs technical validation automatically."} Creative quality has not been human reviewed.`}</p>{job.diagnostic && <AutopilotFailure detail={job.diagnostic}/>} {job.blockers?.map((detail, index) => <AutopilotFailure key={`${detail.code}-${index}`} detail={detail}/>)}{job.next_automatic_at && <p>Next automatic action: {job.eligibility_estimated ? "ESTIMATE: " : ""}{bangkokTime(job.next_automatic_at)}</p>}<Link to={unattended ? "/flow-autopilot" : "/gemini-autopilot"}>{unattended ? "View Flow queue" : "View Gemini queue"}</Link></div>;
 }
 function AutomaticSceneDetails({ job, order }: { job: SceneJob; order: number }) {
   const scene = job.scenes?.find(item => item.order === order);

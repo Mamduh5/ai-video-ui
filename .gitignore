@@ -5,3 +5,6 @@ coverage
 .env.*.local
 *.tsbuildinfo
 .vite-dev*.log
+
+# Generated logs for the isolated R16.2 recovery harness.
+/docs/r162-recovery-review/*.log

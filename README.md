@@ -74,3 +74,21 @@ The following documents preserve historical frontend scope and architecture:
 - [Frontend and Project Library Contract](docs/project-library.md)
 - [Projects Library V1 Report](docs/projects-library-v1.md)
 - [Historical Slideshow V1 Scope](docs/product-scope.md)
+
+## Recover an existing Gemini video
+
+Open the affected project in Video Studio. You can also follow **Recover Existing Video** on its Gemini Autopilot status card. Each recovery card identifies the saved scene, original request time, aspect ratio and saved prompt; you never need a run UUID.
+
+1. Choose **Recover Existing Video**. Studio inspects/downloads that original result in the dedicated authenticated Gemini browser. Keep its original conversation open. Sign-in and security checks are completed manually in Gemini.
+2. If the download fails, choose **Upload Existing MP4**. Open the original request in Gemini and download its video with Gemini's normal Download control.
+3. Select that MP4 using **Original Gemini MP4** in Video Studio. Review the playable preview, the project/scene, the original request time and prompt. Check the explicit original-association confirmation.
+4. Choose **Validate and import original MP4**. Studio checks MP4 integrity, decodes the complete file and requires R3 PASS for the saved aspect, duration and audio policy before attaching it to the original scene. Uploads are limited to 100 MiB.
+5. **Recovery completed** means the clip is restored. Existing completion/assembly can finish. Production stays paused; recovery does not authorize another generation.
+
+Recovery status survives page refresh and API restart. After an interrupted attempt, retry the same control; an already imported matching clip is reused. Selecting a different file requires a fresh preview and confirmation. An unrelated existing scene clip, changed saved target, missing attribution or failed validation is rejected. If automatic correlation cannot be verified, use the explicitly owner-confirmed upload fallback. Its provenance says **owner_attributed_original**, not provider-verified attribution.
+
+States distinguish an evidenced existing result ready to download, downloading, failed download/manual fallback, waiting for owner MP4, validation, completion, original result unavailable and blocked attribution/validation. A result with no supporting evidence is shown as **Check original result**. Login/security challenges remain manual. An active operation or a different run's browser reservation must finish or be recovered first; recovery never releases that other reservation.
+
+Neither recovery route calls Generate, Submit or Force Retry, changes generation accounting, rewrites the original run, resumes a queue or clears an unrelated hold. Native Subject Reference and Starting Image remain separate, capability-gated roles.
+
+Implementation and acceptance evidence: [R16.2 recovery report](../ai-video-pipeline/docs/r162-self-service-gemini-recovery.md).
