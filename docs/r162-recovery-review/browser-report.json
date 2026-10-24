@@ -1,7 +1,7 @@
 {
   "synthetic_media": true,
   "actual_api_handlers": true,
-  "actual_mongo_database": "test_r162_browser_1792644604903",
+  "actual_mongo_database": "test_r162_browser_1792815400738",
   "actual_api_process_restarts": 6,
   "provider_connections": 0,
   "checks": [
@@ -11,7 +11,10 @@
     "landscape: failed automatic recovery, app-only MP4 preview and explicit owner association; API process restart before upload and after import, no duplicate",
     "Gemini Autopilot provides direct project recovery links",
     "390px recovery status remains readable without horizontal overflow",
-    "Original runs byte-equivalent through API, one clip each, accounting 4/4 unchanged, queue paused, protected hold retained, zero provider connections"
+    "Original runs byte-equivalent through API, one clip each, accounting 4/4 unchanged, queue paused, protected hold retained, zero provider connections",
+    "Recovered original plus preserved failed history: rendered reconciliation clears only the stale blocker, separate rendered Resume and Pause exercise real HTTP handlers; no worker loop exists",
+    "Recovered result plus another uncertain Scene 2: rendered UI identifies exact project and working recovery link; real Resume HTTP handler rejects",
+    "Disabled runtime worker: rendered Resume disabled with explicit backend-start requirement; real Resume HTTP handler rejects"
   ],
   "requests": [
     "/gemini-autopilot/projects/auto-portrait/video-recovery/original-auto-portrait/recover",
@@ -23,7 +26,10 @@
     "/gemini-autopilot/projects/manual-portrait/video-recovery/original-manual-portrait/upload",
     "/gemini-autopilot/projects/manual-landscape/video-recovery/original-manual-landscape/recover",
     "/gemini-autopilot/projects/manual-landscape/video-recovery/original-manual-landscape/manual",
-    "/gemini-autopilot/projects/manual-landscape/video-recovery/original-manual-landscape/upload"
+    "/gemini-autopilot/projects/manual-landscape/video-recovery/original-manual-landscape/upload",
+    "/gemini-autopilot/control/reconcile_recovery",
+    "/gemini-autopilot/control/resume",
+    "/gemini-autopilot/control/pause"
   ],
   "errors": [],
   "violations": [],
@@ -44,8 +50,8 @@
           "scene_order": 1,
           "status": "reconciliation_required",
           "submission_intent": true,
-          "at": "2026-10-22T04:50:09.09Z",
-          "finished_at": "2026-10-22T04:50:09.09Z",
+          "at": "2026-10-24T04:16:43.436Z",
+          "finished_at": "2026-10-24T04:16:43.436Z",
           "failure": "download_failed",
           "evidence": {
             "aspect_ratio": "16:9",
@@ -66,8 +72,8 @@
           "scene_order": 1,
           "status": "reconciliation_required",
           "submission_intent": true,
-          "at": "2026-10-22T04:50:09.09Z",
-          "finished_at": "2026-10-22T04:50:09.09Z",
+          "at": "2026-10-24T04:16:43.436Z",
+          "finished_at": "2026-10-24T04:16:43.436Z",
           "failure": "download_failed",
           "evidence": {
             "aspect_ratio": "9:16",
@@ -88,8 +94,8 @@
           "scene_order": 1,
           "status": "reconciliation_required",
           "submission_intent": true,
-          "at": "2026-10-22T04:50:09.09Z",
-          "finished_at": "2026-10-22T04:50:09.09Z",
+          "at": "2026-10-24T04:16:43.436Z",
+          "finished_at": "2026-10-24T04:16:43.436Z",
           "failure": "download_failed",
           "evidence": {
             "aspect_ratio": "16:9",
@@ -110,8 +116,8 @@
           "scene_order": 1,
           "status": "reconciliation_required",
           "submission_intent": true,
-          "at": "2026-10-22T04:50:09.09Z",
-          "finished_at": "2026-10-22T04:50:09.09Z",
+          "at": "2026-10-24T04:16:43.436Z",
+          "finished_at": "2026-10-24T04:16:43.436Z",
           "failure": "download_failed",
           "evidence": {
             "aspect_ratio": "9:16",
@@ -147,8 +153,8 @@
           "scene_order": 1,
           "status": "reconciliation_required",
           "submission_intent": true,
-          "at": "2026-10-22T04:50:09.09Z",
-          "finished_at": "2026-10-22T04:50:09.09Z",
+          "at": "2026-10-24T04:16:43.436Z",
+          "finished_at": "2026-10-24T04:16:43.436Z",
           "failure": "download_failed",
           "evidence": {
             "aspect_ratio": "16:9",
@@ -169,8 +175,8 @@
           "scene_order": 1,
           "status": "reconciliation_required",
           "submission_intent": true,
-          "at": "2026-10-22T04:50:09.09Z",
-          "finished_at": "2026-10-22T04:50:09.09Z",
+          "at": "2026-10-24T04:16:43.436Z",
+          "finished_at": "2026-10-24T04:16:43.436Z",
           "failure": "download_failed",
           "evidence": {
             "aspect_ratio": "9:16",
@@ -191,8 +197,8 @@
           "scene_order": 1,
           "status": "reconciliation_required",
           "submission_intent": true,
-          "at": "2026-10-22T04:50:09.09Z",
-          "finished_at": "2026-10-22T04:50:09.09Z",
+          "at": "2026-10-24T04:16:43.436Z",
+          "finished_at": "2026-10-24T04:16:43.436Z",
           "failure": "download_failed",
           "evidence": {
             "aspect_ratio": "16:9",
@@ -213,8 +219,8 @@
           "scene_order": 1,
           "status": "reconciliation_required",
           "submission_intent": true,
-          "at": "2026-10-22T04:50:09.09Z",
-          "finished_at": "2026-10-22T04:50:09.09Z",
+          "at": "2026-10-24T04:16:43.436Z",
+          "finished_at": "2026-10-24T04:16:43.436Z",
           "failure": "download_failed",
           "evidence": {
             "aspect_ratio": "9:16",

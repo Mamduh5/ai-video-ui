@@ -1,0 +1,16 @@
+{
+  "fixture_only": true,
+  "forwarded_backend_or_provider_requests": 0,
+  "checks": [
+    "1440px unverified provider disables image selection and honors dashboard route",
+    "1440px native browser decoding, preview, form preservation and no horizontal overflow",
+    "1440px explicit starting-image multipart role, both aspect ratios, and visible persistence failure preserve image",
+    "1440px removal and workflow switching clear references without another request",
+    "390px unverified provider disables image selection and honors dashboard route",
+    "390px native browser decoding, preview, form preservation and no horizontal overflow",
+    "390px explicit starting-image multipart role, both aspect ratios, and visible persistence failure preserve image",
+    "390px removal and workflow switching clear references without another request"
+  ],
+  "violations": [],
+  "browser_errors": []
+}
