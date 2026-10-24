@@ -124,3 +124,15 @@ for(const aspect of ["9:16","16:9"])it(`saves and reloads both provider aspect d
  view.unmount();show(<SettingsPage/>);await waitFor(()=>expect(screen.getByLabelText("Default aspect ratio")).toHaveValue(aspect));
  fireEvent.change(screen.getByLabelText("Preferred workflow"),{target:{value:"flow_web"}});expect(screen.getByLabelText("Default aspect ratio")).toHaveValue(aspect);
 });
+
+it("Settings shares the backend Resume denial and explicitly identifies a disabled runtime worker",async()=>{
+ mockReads();const reads=vi.mocked(apiJson).getMockImplementation()!;
+ vi.mocked(apiJson).mockImplementation(async(path,request)=>path==="/settings/gemini"?{...gemini,config:{...gemini.config,enabled:false},resume_eligibility:{scheduler_paused:true,runtime_worker_enabled:false,can_resume:false,block_reason:"runtime_worker_disabled",block_message:"Start the backend with the Gemini worker enabled before resuming."}}:reads(path,request));
+ show(<SettingsPage/>);const panel=await screen.findByLabelText("Gemini Resume eligibility");expect(panel).toHaveTextContent("Scheduler: paused");expect(panel).toHaveTextContent("Runtime generation worker: disabled");expect(within(panel).getByText("Start the backend with the Gemini worker enabled before resuming.")).toBeVisible();expect(screen.getByLabelText("Enable Autopilot")).toBeDisabled();expect(within(panel).getByRole("link",{name:"Review recovery and Resume eligibility"})).toHaveAttribute("href","/gemini-autopilot");expect(vi.mocked(apiJson).mock.calls.some(([,request])=>request?.method==="POST")).toBe(false);
+});
+
+it("Settings keeps a resolved stale recovery hold disabled and links to its guarded reconciliation action",async()=>{
+ mockReads();const reads=vi.mocked(apiJson).getMockImplementation()!;
+ vi.mocked(apiJson).mockImplementation(async(path,request)=>path==="/settings/gemini"?{...gemini,config:{...gemini.config,enabled:false},resume_eligibility:{scheduler_paused:true,runtime_worker_enabled:true,can_resume:false,can_reconcile_recovery_hold:true,block_reason:"stale_recovery_hold",block_message:"The saved recovery receipts are complete; reconcile the stale recovery hold before Resume."}}:reads(path,request));
+ show(<SettingsPage/>);const panel=await screen.findByLabelText("Gemini Resume eligibility");expect(panel).toHaveTextContent("Runtime generation worker: enabled");expect(within(panel).getByText(/reconcile the stale recovery hold before Resume/)).toBeVisible();expect(screen.getByLabelText("Enable Autopilot")).toBeDisabled();expect(within(panel).getByRole("link",{name:"Review recovery and Resume eligibility"})).toHaveAttribute("href","/gemini-autopilot");expect(vi.mocked(apiJson).mock.calls.some(([,request])=>request?.method==="POST")).toBe(false);
+});

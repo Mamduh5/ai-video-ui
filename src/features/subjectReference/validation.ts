@@ -1,5 +1,6 @@
 export type SubjectReferenceCapability = {
   supported: boolean;
+  aspect_ratios?: string[];
   status?: string;
   code?: string;
   message?: string;

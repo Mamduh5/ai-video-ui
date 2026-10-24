@@ -39,3 +39,11 @@ Live upload, provider role verification, a Tesla generation result, and subjecti
 `/scene-video-options` exposes `flow_model`, `flow_ingredients_supported` and `flow_ingredients_capabilities`. The form validates selected duration and resolution against the configured model plus Ingredients mode. Unsupported selections remain visible and block creation; the form does not silently change them. Fast/Lite Ingredients support eight seconds at native 720p; Quality Ingredients is rejected. Omni retains its supported 4/6/8/10-second choices. Selecting an image requires independent continuity and excludes opening/continuity-frame inputs. Exact upload acknowledgement and final subject consistency are separate backend/live acceptance gates.
 
 The comprehensive cross-repository audit is in the backend checkout at `docs/ai-video-pipeline-milestone-2026-10-19.md`. No provider work was performed during that final audit.
+
+## Starting Image update (2026-10-24)
+
+Gemini now offers a separate, explicitly selected **Starting Image (optional)** mode. Native preparation in the dedicated main account acknowledged the image and retained the selected 9:16 and 16:9 ratios after upload, without submitting a video. Subject Reference remains separately unavailable under secondary information; an earlier subject-reference choice is never substituted.
+
+The image opens Scene 1, so its composition/background may appear in the opening. Later scenes use accepted-scene continuity frames. Exact subject identity and generated opening fidelity have not been proven by a new generation. This mode reuses the preview/replace/remove controls, validation, immutable storage and guarded upload, while persisting `starting_image` in a distinct role, project field and multipart field. Failed image storage or acknowledgement cannot silently proceed without it. No-image JSON creation stays unchanged.
+
+The updated existing browser fixture covers unavailable capability, explicit role selection, both aspect choices, retained preview after failed persistence, removal/workflow changes and responsive layout. Its 8 checks pass with zero backend/provider requests. Full frontend validation: 51 files, 449 tests; typecheck/build and lint PASS. Live application controls and native provider preparation were checked separately; no production Resume or test project was submitted.

@@ -31,7 +31,7 @@ try{
  await start(); const before=await evidence();
  browser=await chromium.launch({headless:true,channel:"chrome"});
  const context=await browser.newContext({viewport:{width:1440,height:1000}});
- await context.route("**/*",route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==new URL(app).origin&&url.origin!==api){violations.push(`${req.method()} ${url.origin}${url.pathname}`);return route.abort();}if(req.method()==="POST"){requests.push(url.pathname);if(!/^\/gemini-autopilot\/projects\/[^/]+\/video-recovery\/[^/]+\/(recover|manual|upload)$/.test(url.pathname)){violations.push(url.pathname);return route.abort();}}return route.continue();});
+ await context.route("**/*",route=>{const req=route.request(),url=new URL(req.url());if(url.origin!==new URL(app).origin&&url.origin!==api){violations.push(`${req.method()} ${url.origin}${url.pathname}`);return route.abort();}if(req.method()==="POST"){requests.push(url.pathname);if(!/^\/gemini-autopilot\/projects\/[^/]+\/video-recovery\/[^/]+\/(recover|manual|upload)$/.test(url.pathname)&&!/^\/gemini-autopilot\/control\/(reconcile_recovery|resume|pause)$/.test(url.pathname)){violations.push(url.pathname);return route.abort();}}return route.continue();});
  const page=await context.newPage();page.on("pageerror",e=>errors.push(e.message));
  for(const shape of ["portrait","landscape"]){
   const id=`auto-${shape}`;
@@ -74,6 +74,30 @@ try{
  const after=await evidence();assert.equal(after.submissions,before.submissions);assert.equal(after.enabled,false);assert.equal(after.recovery_only,true);assert.equal(after.block,before.block);assert.deepEqual(after.originals,before.originals);
  assert.deepEqual(after.attempts,{"auto-portrait":1,"auto-landscape":1,"manual-portrait":1,"manual-landscape":1});assert.deepEqual(errors,[]);assert.deepEqual(violations,[]);
  checks.push("Original runs byte-equivalent through API, one clip each, accounting 4/4 unchanged, queue paused, protected hold retained, zero provider connections");
+ // Reproduce the reported recovery-to-Resume failure against the same isolated
+ // actual HTTP handlers. This test server never starts its scheduler loop.
+ const scenario=async mode=>{const response=await fetch(`${api}/__resume-scenario/${mode}`,{method:"POST"});assert.ok(response.ok,await response.text());await page.goto(`${app}/gemini-autopilot`);await page.getByLabel("Autopilot status").waitFor();};
+ await page.setViewportSize({width:1440,height:1000});
+ await scenario("stale");
+ const sceneRecovery=page.getByRole("region",{name:"Scene recovery"});
+ await sceneRecovery.getByRole("button",{name:"Reconcile recovered results",exact:true}).click();
+ const resume=page.getByRole("button",{name:"Resume Autopilot",exact:true});await resume.waitFor();assert.ok(await resume.isEnabled());
+ assert.equal((await evidence()).enabled,false);assert.equal((await evidence()).submissions,before.submissions);
+ assert.equal(requests.filter(p=>p==="/gemini-autopilot/control/resume").length,0);
+ await resume.click();await page.getByRole("button",{name:"Pause Autopilot",exact:true}).waitFor();assert.equal((await evidence()).enabled,true);
+ await page.getByRole("button",{name:"Pause Autopilot",exact:true}).click();await resume.waitFor();assert.equal((await evidence()).enabled,false);
+ checks.push("Recovered original plus preserved failed history: rendered reconciliation clears only the stale blocker, separate rendered Resume and Pause exercise real HTTP handlers; no worker loop exists");
+ await scenario("mixed");await sceneRecovery.getByText(/Other unresolved project.*Scene 2/).waitFor();
+ assert.equal(await page.getByRole("button",{name:"Resume Autopilot",exact:true}).count(),0);
+ assert.equal(await sceneRecovery.getByRole("link",{name:"Recover Existing Video",exact:true}).getAttribute("href"),"/scene-jobs/other-unresolved#video-recovery");
+ const denied=await fetch(`${api}/gemini-autopilot/control/resume`,{method:"POST"});assert.equal(denied.status,409);assert.match(await denied.text(),/Other unresolved project|Scene 2|unresolved/i);
+ checks.push("Recovered result plus another uncertain Scene 2: rendered UI identifies exact project and working recovery link; real Resume HTTP handler rejects");
+ await scenario("worker_disabled");await page.getByRole("heading",{name:"Generation worker disabled",exact:true}).waitFor();
+ assert.ok(await page.getByRole("button",{name:"Resume Autopilot",exact:true}).isDisabled());await page.getByText(/Resume cannot start videos until/).waitFor();
+ const disabled=await fetch(`${api}/gemini-autopilot/control/resume`,{method:"POST"});assert.equal(disabled.status,409);assert.match(await disabled.text(),/worker.*disabled|disabled.*worker/i);
+ checks.push("Disabled runtime worker: rendered Resume disabled with explicit backend-start requirement; real Resume HTTP handler rejects");
+ assert.deepEqual((await evidence()).originals["auto-landscape"],after.originals["auto-landscape"]);assert.equal((await evidence()).submissions,before.submissions);assert.deepEqual(errors,[]);assert.deepEqual(violations,[]);
+
  await writeFile(path.join(output,"browser-report.json"),JSON.stringify({synthetic_media:true,actual_api_handlers:true,actual_mongo_database:db,actual_api_process_restarts:6,provider_connections:0,checks,requests,errors,violations,before,after},null,2));
  console.log(`${checks.length} real-browser recovery checks passed; zero provider connections or generation routes.`);
 }finally{await browser?.close();await stop();await writeFile(path.join(output,"server.log"),serverOutput);}

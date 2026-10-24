@@ -39,12 +39,12 @@ it("retains supported Omni ten-second Ingredients and Draft resolution", async (
 const bitmap = () => ({ width: 1200, height: 800, close: vi.fn() });
 const image = (name = "roadster.png") => new File(["fixture image bytes"], name, { type: "image/png" });
 function deferred<T>() { let resolve!: (value: T) => void; let reject!: (reason: unknown) => void; const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
-function mount(cap: unknown = capability) {
- vi.mocked(apiJson).mockImplementation(async path => { if (path === "/scene-video-options") return options; if (path === "/gemini-autopilot/subject-reference-capability") { if (cap instanceof Error) throw cap; return cap; } return { job_id: "created" }; });
+function mount(cap: unknown = capability, starting: unknown = {...capability,supported:false,status:"unverified",message:"Native starting-image preparation is unverified."}) {
+ vi.mocked(apiJson).mockImplementation(async path => { if (path === "/scene-video-options") return options; if (path === "/gemini-autopilot/starting-image-capability") { if(starting instanceof Error) throw starting; return starting; } if (path === "/gemini-autopilot/subject-reference-capability") { if (cap instanceof Error) throw cap; return cap; } return { job_id: "created" }; });
  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
  return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={["/videos/new?workflow=gemini_web"]}><Routes><Route path="/videos/new" element={<CreateSceneVideoPage/>}/><Route path="/scene-jobs/:id" element={<p>Project created</p>}/></Routes></MemoryRouter></QueryClientProvider>);
 }
-async function ready() { const input = await screen.findByLabelText("Reference image file"); await waitFor(() => expect(input).toBeEnabled()); fireEvent.change(screen.getByLabelText("Idea / story"), { target: { value: "Same Roadster in a new coastal setting" } }); return input; }
+async function ready() { if(screen.queryByLabelText("Image mode")){await screen.findByRole("option",{name:"Subject Reference"});fireEvent.change(screen.getByLabelText("Image mode"),{target:{value:"subject_reference"}});} const input = await screen.findByLabelText("Reference image file"); await waitFor(() => expect(input).toBeEnabled()); fireEvent.change(screen.getByLabelText("Idea / story"), { target: { value: "Same Roadster in a new coastal setting" } }); return input; }
 function choose(input: HTMLElement, file: File = image()) { fireEvent.change(input, { target: { files: [file] } }); }
 beforeEach(() => {
  vi.mocked(apiJson).mockReset(); vi.mocked(apiMultipart).mockReset();
@@ -56,8 +56,8 @@ afterEach(() => { cleanup(); clients.splice(0).forEach(c => c.clear()); vi.unstu
 
 it("keeps no-image Gemini creation unchanged while an unverified reference role is disabled", async () => {
  mount({ ...capability, supported: false, status: "unverified", message: "Subject-reference roles have not been verified in the dedicated browser." });
- expect(await screen.findByLabelText("Reference image file")).toBeDisabled();
- expect(await screen.findByText(/Subject-reference roles have not been verified/)).toBeVisible();
+ expect(await screen.findByLabelText("Image mode")).toHaveValue("none"); expect(screen.queryByLabelText("Reference image file")).not.toBeInTheDocument();
+ expect(await screen.findByText(/Subject-reference roles have not been verified/)).toBeInTheDocument();
  fireEvent.change(screen.getByLabelText("Idea / story"), { target: { value: "A Roadster accelerates" } });
  await waitFor(() => expect(screen.getByRole("button", { name: "Add to Gemini Queue" })).toBeEnabled());
  fireEvent.click(screen.getByRole("button", { name: "Add to Gemini Queue" })); await screen.findByText("Project created");
@@ -65,14 +65,14 @@ it("keeps no-image Gemini creation unchanged while an unverified reference role 
  expect(apiMultipart).not.toHaveBeenCalled();
 });
 it.each([undefined, {}, { ...capability, max_bytes: 0 }])("fails closed on missing or malformed capability %j", async cap => {
- mount(cap ?? {}); expect(await screen.findByLabelText("Reference image file")).toBeDisabled();
- expect(await screen.findByText(/Subject Reference is unavailable/)).toBeVisible();
+ mount(cap ?? {}); expect(await screen.findByLabelText("Image mode")).toHaveValue("none"); expect(screen.queryByLabelText("Reference image file")).not.toBeInTheDocument();
+ expect(await screen.findByText(/Subject Reference is unavailable/)).toBeInTheDocument();
  expect(apiMultipart).not.toHaveBeenCalled();
 });
 it("fails closed when the capability endpoint cannot be read", async () => {
  mount(new Error("Capability check unavailable"));
- expect(await screen.findByLabelText("Reference image file")).toBeDisabled();
- expect(await screen.findByText(/Subject Reference is unavailable/)).toBeVisible();
+ expect(await screen.findByLabelText("Image mode")).toHaveValue("none"); expect(screen.queryByLabelText("Reference image file")).not.toBeInTheDocument();
+ expect(await screen.findByText(/Subject Reference is unavailable/)).toBeInTheDocument();
 });
 it("previews, preserves across field edits, replaces and removes a reference", async () => {
  mount(); const input = await ready(); choose(input);
@@ -213,4 +213,35 @@ it("Flow Autopilot (unattended) submits multipart and enqueues into flow autopil
 
  expect(apiMultipart).toHaveBeenCalledWith("/scene-video-jobs", expect.any(FormData), expect.any(Object));
  expect(apiJson).toHaveBeenCalledWith("/flow-autopilot/queue", { method: "POST", body: { job_id: "unattended-created" } });
+});
+
+it.each(["9:16","16:9"])("uses an explicitly selected Starting Image role and preserves %s in the queued request",async aspect=>{
+ mount({...capability,supported:false,message:"Subject Reference remains unavailable."},{...capability,aspect_ratios:["9:16","16:9"]});
+ expect(await screen.findByLabelText("Image mode")).toHaveValue("none");
+ expect(screen.queryByLabelText("Starting image file")).not.toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText("Image mode"),{target:{value:"starting_image"}});
+ fireEvent.change(screen.getByLabelText("Aspect ratio"),{target:{value:aspect}});
+ fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"A Roadster continues from the opening image"}});
+ expect(screen.getByRole("button",{name:"Add to Gemini Queue"})).toBeDisabled();
+ const input=screen.getByLabelText("Starting image file"),file=image();choose(input,file);
+ await screen.findByAltText("Starting image preview");
+ expect(screen.getByText(/Later scenes continue from accepted-scene continuity frames/)).toBeVisible();
+ expect(screen.getByText(/Subject Reference remains unavailable/).closest("details")).not.toHaveAttribute("open");
+ vi.mocked(apiMultipart).mockResolvedValue({job_id:"created"});fireEvent.click(screen.getByRole("button",{name:"Add to Gemini Queue"}));
+ await screen.findByText("Project created");
+ const [path,body]=vi.mocked(apiMultipart).mock.calls[0];expect(path).toBe("/gemini-autopilot/queue");expect(body.get("starting_image")).toBe(file);expect(body.get("subject_reference")).toBeNull();
+ expect(JSON.parse(String(body.get("request")))).toMatchObject({image_mode:"starting_image",aspect_ratio:aspect});
+});
+it("keeps Starting Image gated on native acknowledgement and both aspect ratios, with the observed reason",async()=>{
+ mount({...capability,supported:false},{...capability,status:"unverified",aspect_ratios:["16:9"],message:"Native portrait attachment acknowledgement was not observed."});
+ const option=await screen.findByRole("option",{name:/Starting Image/});expect(option).toBeDisabled();expect(await screen.findByText("Native portrait attachment acknowledgement was not observed.")).toBeVisible();
+ expect(screen.queryByLabelText("Starting image file")).not.toBeInTheDocument();expect(apiMultipart).not.toHaveBeenCalled();
+});
+it("retains the Starting Image after failed upload and never falls back to a no-image request",async()=>{
+ mount({...capability,supported:false},{...capability,aspect_ratios:["9:16","16:9"]});
+ await screen.findByRole("option",{name:"Starting Image (optional)"});fireEvent.change(screen.getByLabelText("Image mode"),{target:{value:"starting_image"}});fireEvent.change(screen.getByLabelText("Idea / story"),{target:{value:"A Roadster continues"}});
+ choose(screen.getByLabelText("Starting image file"));await screen.findByAltText("Starting image preview");vi.mocked(apiMultipart).mockRejectedValue(new Error("Attachment storage failed"));
+ fireEvent.click(screen.getByRole("button",{name:"Add to Gemini Queue"}));expect(await screen.findByRole("alert")).toHaveTextContent("Attachment storage failed");expect(screen.getByAltText("Starting image preview")).toBeVisible();
+ expect(screen.queryByText("Project created")).not.toBeInTheDocument();expect(vi.mocked(apiJson).mock.calls.some(([path,request])=>path==="/gemini-autopilot/queue"&&request?.method==="POST")).toBe(false);
+ fireEvent.change(screen.getByLabelText("Image mode"),{target:{value:"none"}});expect(screen.queryByAltText("Starting image preview")).not.toBeInTheDocument();
 });
